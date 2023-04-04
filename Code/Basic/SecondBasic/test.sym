@@ -1,0 +1,9 @@
+1,-1,0,main.a.o1
+2,-1,0,main.a.i1
+3,-1,2,main.b.out
+4,-1,2,main.b.in[0]
+5,-1,2,main.b.in[1]
+6,-1,1,main.b.ands[0].out
+7,-1,1,main.b.ands[0].in[0]
+8,-1,1,main.b.ands[1].out
+9,-1,1,main.b.ands[1].in[0]
