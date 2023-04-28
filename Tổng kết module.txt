@@ -1,4 +1,4 @@
-ZKP
+ZKSync 
 
 
 
@@ -12,8 +12,7 @@ Có nhiều phương pháp mở rộng blockchain, bao gồm ZKRollups, Plasma, 
 Phân biệt:
 Optimism và Arbitrum One là 2 blockchain mở rộng tốc độ cao hơn sử dụng công nghệ Optimistic Rollup.
 ZK Rollup và Optimistic Rollup không liên quan gì tới nhau, đây là 2 công nghệ độc lập và có phương pháp khác nhau để mở rộng blockchain. VD dYdX, Loopring dùng ZKRollup để đạt tốc độ cao
-ZKSync là 1 hệ sinh thái sử dụng công nghệ ZkRollups. Cái ta học là ZKP về công nghệ chứ kp hệ sinh thái zksync
-ZKSync Era và ZKSync Lite là 2 nền tảng blockchain khác nhau có mainnet độc lập
+ZKSync là 1 hệ sinh thái sử dụng công nghệ ZkRollups.
 
 Zero knowledge proof là kiểu bằng chứng mà ai cũng xác thực được nó là đúng dù không biết về nó. 
 Ví dụ: Alice muốn chứng minh cho Bob rằng cô ấy có mật khẩu để mở một tài khoản mà không muốn tiết lộ mật khẩu đó cho Bob. Alice có thể sử dụng zero-knowledge proof để làm điều này.
@@ -74,7 +73,6 @@ SnarkJS là JS lib giúp implement zkSNARK, hỗ trợ dev trong việc sinh ra 
 
 
 # Zero knowledge proof
-Công nghệ gốc mà zksync sử dụng.
 Hệ thống có 2 người Verifier và Prover. Verifier có nhiệm vụ kiểm tra xem Prover có biết về 1 thông tin nào đó không. Ta chỉ check là có biết hay không chứ ko liên quan đến chủ sở hữu. VD người dùng cung username password để vào hệ thống thì ta chỉ chứng minh là họ biết thông tin account đó và ta k qt tới việc họ có đúng là chủ sở hữu account đó không. 
 
 Quan niệm đa phần ta đều nghĩ Prover là người xấu luôn tìm cách đánh lừa Verifier để bypass hệ thống. Nhưng Verifier cũng có thể là người xấu ở đây. VD người dùng gửi password lên, không có gì đảm bảo là server sẽ thực sự hash password rồi mới lưu hoặc Verifier lưu thông tin người dùng lại rồi từ đó lần mò ra thông tin cá nhân khác. 
@@ -182,7 +180,7 @@ Lỗi k thực hiện được thì đổi thử sang cmd thay vì dùng powersh
 Tạo 1 power of tau ceremony mới: snarkjs powersoftau new bn128 12 pot12_0000.ptau -v
 Contribute to ceremony: snarkjs powersoftau contribute pot12_0000.ptau pot12_0001.ptau --name="First contribution" -v
 => Tất cả chỉ để có 2 file pot12_0001.ptau 
-2) Phase 2 phụ thuộc vào circuit => cần circuit sinh ra zkey rồi verification key
+2) Phase 2 phụ thuộc vào circuit => cần circuit sinh ra zkey
 Bắt đầu phase 2: snarkjs powersoftau prepare phase2 pot12_0001.ptau pot12_final.ptau -v => sinh ra file pot12_final.ptau
 => Bước cho đến chỗ này nên bỏ vì chạy rất lâu, thay vì v ta chạy: 
 snarkjs r1cs info <file>.r1cs 
@@ -191,7 +189,8 @@ Mạch càng lớn chạy càng lâu và file ptau càng lớn
 Trong 1 dự án dùng nhiều mạch thì chỉ cần có 1 file ptau bao lượng constraint lớn nhất là được
 Để an toàn còn có lệnh kiểm chứng file ptau là chuẩn: snarkjs powersoftau verify <file>.ptau
 
-Start zkey mới: snarkjs groth16 setup <tên file r1cs>.r1cs pot12_final.ptau testfile_0000.zkey => sinh ra testfile_0000.zkey
+Start zkey mới: => cần zkey sinh ra 
+snarkjs groth16 setup <tên file r1cs>.r1cs pot12_final.ptau testfile_0000.zkey => sinh ra testfile_0000.zkey
 Contribute to phase 2 ceremony: snarkjs zkey contribute testfile_0000.zkey testfile_0001.zkey --name="1st Contributor Name" -v
 => sinh ra testfile_0001.zkey
 Export verification key: snarkjs zkey export verificationkey testfile_0001.zkey verification_key.json
@@ -202,7 +201,7 @@ snarkjs groth16 prove testfile_0001.zkey witness.wtns proof.json public.json
 Đầu ra proof là 2 file: proof.json chứa proof và public.json chứa giá trị public input và output
 => Chỗ này nếu mạch có lỗi sẽ chạy ra lỗi. Vd mạch có những 2 output là lỗi ngay
 
--> Verify bằng chứng: => cần proof và verification key
+-> Verify bằng chứng: => cần proof
 C1: Verify bằng server js bth
 Chạy lệnh: snarkjs groth16 verify verification_key.json public.json proof.json
 => Sẽ check proof.json hợp lệ thì trả ra ok
@@ -235,9 +234,9 @@ input.json trong test_js: {"a": "3", "b": "11"} => public input phải để lê
 cd test_js
 node generate_witness.js test.wasm input.json witness.wtns
 cd ..
-
 snarkjs groth16 setup test.r1cs powersOfTau28_hez_final_08.ptau test_0000.zkey
 snarkjs zkey contribute test_0000.zkey test_0001.zkey --name="1st Contributor Name" -v
+
 123
 snarkjs zkey export verificationkey test_0001.zkey verification_key.json
 
@@ -266,24 +265,10 @@ VD:
  outA <== out;
 => lỗi vì signal in lúc compile là unknown nên vòng while k rõ ràng mà đầu ra outA lại phụ thuộc vào logic đó
 
--> Constraint
-1 phép là constraint sẽ check lỗi. Nếu lỗi sẽ dừng mạch ngay.
-1 phép không là constraint sẽ k check lỗi và mạch vẫn chạy bất chấp phép đó có thể gây lỗi.
+Signal và component phải khai báo ở top level block. Ở phiên bản mới có thể khai báo signal ở trong condition với đk condition phải known từ compiletime
+1 component chỉ có thể truy cập mọi signal của component nested bên trong. K truy cập được vào signal nested của nested components
 
-Có 2 phép constraint thông dụng là: === và <==
-Phép đầu tiên sẽ dừng mạch nếu 2 vế k bằng nhau
-Phép thứ 2 sẽ dừng mạch nếu expression bên trái k hợp lệ. VD x <== a/b mà a không chia hết cho b sẽ k thỏa mãn constraint này và bị dừng mạch
-
-Var thì có thể so sánh, tính toán thoải mái với các phép toán bth
-Signal thì bị hạn chế, ta hiểu code circom thì các signal ban đầu là unknown và mọi phần code gán signal output đều phải được rõ ràng từ thời điểm compile. 
-Do đó:
-- Signal k thể so sánh < or > với 1 signal khác vì chúng là unknown. Signal k thể ss với 1 số vì output đầu ra k được phụ thuộc vào 1 logic k rõ ràng, nó unknown nên lúc compile k rõ phép if else đó chạy như nào. Điều đb là nếu phép ss 1 số với 1 signal mà k ảnh hưởng gì tới output(bất kể if else chạy vào đâu) thì nó vẫn k báo lỗi.
-- Signal chỉ có thể dùng phép số học cơ bản như cộng trừ nhân chia dịch bit với 1 signal or 1 số khác. Signal có thể gán bằng or ss bằng với constraint
-- Có thể gán var cho signal nhưng k gán signal cho var => signal immutable và rất chặt chẽ, gán cho var đc thì ss đc mất r
-
-signal mặc định là private chỉ trừ ouput mạch hàm main và các tham số specific là public trong hàm main
-
--> Varible Là non signal data và mutable
+-> Varible là non signal data và mutable
 
 Phép gán bằng k trả về giá trị, đừng gộp như này là sai: a = (b = 3) + 2; or if(a=3){...}
 
@@ -298,6 +283,27 @@ Chỉ có a++, k có chiều ngược lại
 x << k = x/(2^k) và k phải <= p/2
 
 -> Operator ?_:_ chỉ được dùng ở top level
+
+-> Lỗi scalar:
+Code k được có quá nhiều output or k có output nào 
+
+Trong mạch circom k được chỉ có phép cộng trừ, buộc phải có ít nhất 1 phép nhân. Vì khi compile, groth cho input đi qua các cổng ra output. Mạch ta tạo ra được tách riêng thành các cổng khác nhau cho từng constraints. Nó bỏ qua các cổng cộng và chỉ lấy các cổng nhân. Do đó k có cổng nhân nào thì coi như mạch k có gì vì k có cổng liên kết các cổng cộng lại với nhau
+
+VD ứng dụng circom thực sự có ích: tạo 1 circom nhận private input là private key, public input là address, mạch dùng private key tạo ra address để chứng minh sở hữu private key của 1 address
+circom giúp che dấu private input là điểm lợi 1 
+điểm lợi 2 là tách cục code trong solidity dùng trong hàm verify của circom thì hàm nhỏ sẽ lỗ gas, hàm lớn sẽ lợi gas hơn. Nên nhớ do transaction gọi 1 hàm getter sẽ payfee thêm của mọi logic trong hàm getter đó
+
+1/0 thì lỗi, 1/in và in = 0 thì không báo lỗi. Signal mặc định là 0
+Khi mạch lỗi sẽ bỏ qua nếu dùng <-- nên 1/0 ra 0 => chứ kp overflow k hợp lý. Phép toán trên circom là trên trường số hữu hạn
+
+-> Phép toán trên trường số hữu hạn:
+1/2 = 10944121435919637611123202872628637544274182200208017171849102093287904247809 = x
+với max trường hữu hạn nguyên là p = 21888242871839275222246405745257275088548364400416034343698204186575808495617
+=> trong circom không tồn tại float point. Nên phép chia thực chất là phép nhân nghịch đảo của số đó modulo p
+Thực vậy: 2*x = 21888242871839275222246405745257275088548364400416034343698204186575808495617 + 1 = 1 (modulo p)
+Tính: 1/2 (mod p) = x => 2*x = 1 (mod p) quy về phép nhân => mà 2 < 1 nên 2*x = 1 + p => x = (p + 1)/2
+
+-> tuple và array
 
 
 
@@ -315,11 +321,13 @@ Snarkjs thay vì sinh r1cs constraint như với template bth, nó sẽ xử lý
 
 
 # Component
-Component chỉ hoàn tất việc khởi tạo và bắt đầu chạy khi mọi input của nó đều được gán đủ giá trị. VD signal input của 1 template là mảng 2 phần tử thì mạch sẽ chỉ chạy khi cả 2 phần tử đều được gán giá trị. Chỉ khi đó mới truy cập được output signal của mạch đó.
+Component chỉ hoàn tất việc khởi tạo và bắt đầu chạy khi mọi input của nó đều được gán đủ giá trị. VD signal input của 1 template là mảng 2 phần tử thì mạch sẽ chỉ chạy khi cả 2 phần tử đều được gán giá trị. Chỉ khi đó mới truy cập được output signal của mạch đó. Mạch nào gán đủ giá trị trước sẽ được khởi tạo trước chứ k qt thứ tự trong code
 
 Từ khóa parallel có thể thêm vào template or từng lúc khởi tạo component. Chỉ dùng khi các components hay template lớn, khi đó sẽ được xử lý độc lập. Nó chỉ có hiệu lực khi dùng C++ để generate witness
 
 1 file circom có thể k có component main và chỉ được có 1 main comp. Kể cả các file include cũng coi là phần code đó và k được có main nếu file này đã có
+
+-> Anonymous component
 
 
 
@@ -329,4 +337,45 @@ include file đó vào có thể dùng các template và function bên trong.
 
 
 
+# Constraint
+1 phép là constraint sẽ check lỗi. Nếu lỗi sẽ dừng mạch ngay.
+1 phép không là constraint sẽ k check lỗi và mạch vẫn chạy bất chấp phép đó có thể gây lỗi.
 
+Có 2 phép constraint thông dụng là: === và <==
+Phép đầu tiên sẽ dừng mạch nếu 2 vế k bằng nhau
+Phép thứ 2 sẽ dừng mạch nếu expression bên trái k hợp lệ. VD x <== a/b mà a không chia hết cho b sẽ k thỏa mãn constraint này và bị dừng mạch
+Var thì có thể so sánh, tính toán thoải mái với các phép toán bth
+Signal thì bị hạn chế, ta hiểu code circom thì các signal ban đầu là unknown và mọi phần code gán signal output đều phải được rõ ràng từ thời điểm compile.
+Do đó:
+- Signal k thể so sánh < or > với 1 signal khác vì chúng là unknown. Signal k thể ss với 1 số vì output đầu ra k được phụ thuộc vào 1 logic k rõ ràng, nó unknown nên lúc compile k rõ phép if else đó chạy như nào. Điều đb là nếu phép ss 1 số với 1 signal mà k ảnh hưởng gì tới output(bất kể if else chạy vào đâu) thì nó vẫn k báo lỗi.
+- Signal chỉ có thể dùng phép số học cơ bản như cộng trừ nhân chia dịch bit với 1 signal or 1 số khác. Signal có thể gán bằng or ss bằng với constraint
+- Có thể gán var cho signal nhưng k gán signal cho var => signal immutable và rất chặt chẽ, gán cho var đc thì ss đc mất r
+signal mặc định là private chỉ trừ ouput mạch hàm main và các tham số specific là public trong hàm main
+Mọi constraint trong circom đều là quadratic của dạng (A*B + C = 0), nó luôn biến đổi được về dạng đó.
+Nếu không sẽ lỗi. VD:
+template multi3() {
+     signal input in;
+     signal input in2;
+     signal input in3;
+     signal output out;
+     out <== in*in2*in3;
+}
+=> lỗi vì in*in2*in3 không là quadratic mà là bậc 3 mất r
+Phép gán out <== 1 - a*b; tương đương với:
+out === 1 - a*b;
+out <-- 1 - a*b;
+Khi constrains được đặt trong block conditional hay loop thì phần điều kiện k được phép unknown mà phải xđ giá trị rõ. NN là vì vc sinh constraints phải là unique và không phụ thuộc vào unknown input signal.
+Constraint phụ thuộc vào biến, biến nằm trong loop hay condition thì phần dk vẫn k được unknown
+
+
+
+# Tag
+main copmonent input k được có tag
+tag sẽ tự kế thừa dù gán 1 input có tag cho 1 input k có tag
+tag do ta tự implement và compiler k check validity của nó
+Chỉ signal có tag mới truyền giá trị được vào 1 signal input có cùng tag đó. Các signal intermediate hay output gán thoải mái
+
+Tag with value:
+value của tag phải xđ rõ tại thời điểm compile time. Có thể gán và lấy giá trị.
+signal chỉ có thể gán tag value trước khi nó có được gán giá trị thực tế
+Mọi phần tử của signal array đều có chung tag value và lấy được thông qua tên array luôn
