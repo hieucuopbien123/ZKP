@@ -1,0 +1,389 @@
+Circom
+
+
+
+# Basic
+-> Dùng log
+
+
+
+# Zero knowledge proof
+Hệ thống có 2 người Verifier và Prover. Verifier có nhiệm vụ kiểm tra xem Prover có biết về 1 thông tin nào đó không. Ta chỉ check là có biết hay không chứ ko liên quan đến chủ sở hữu. VD người dùng cung username password để vào hệ thống thì ta chỉ chứng minh là họ biết thông tin account đó và ta k qt tới việc họ có đúng là chủ sở hữu account đó không. 
+
+Quan niệm đa phần ta đều nghĩ Prover là người xấu luôn tìm cách đánh lừa Verifier để bypass hệ thống. Nhưng Verifier cũng có thể là người xấu ở đây. VD người dùng gửi password lên, không có gì đảm bảo là server sẽ thực sự hash password rồi mới lưu hoặc Verifier lưu thông tin người dùng lại rồi từ đó lần mò ra thông tin cá nhân khác. 
+Điều đó đặt ra 1 nhu cầu là cần có 1 giao thức kiểm tra mà phía Verifier không biết gì về kiến thức mà phía Prover đang nắm giữ => Zero knowledge proof.
+
+Vd: Hang của Alibaba là 1 hang hình tròn có 1 đầu vào, 1 đầu cánh cổng ở nửa bên kia hình tròn. P cần chứng minh là có chìa khóa mở cổng mà k tiết lộ cho V. P đi vào hang tùy ý chọn theo hướng A hoặc B. V đặt ra 1 nhận định là "Hãy đi ra ở cổng B", xảy ra 2 case:
+- Nếu ban đầu P vào cổng B thì chỉ cần quay đầu lại
+- Nếu ban đầu P vào công A thì mở khóa rồi đi ra cổng B
+=> P xuất hiện ở đầu B thật thì xác suất P không biết mật khẩu là 0.5
+=> Thử lần thứ 2 và P vẫn đi ra đầu B thì xs giảm còn 0.125
+=> Thử n lần khiến xs giảm cực kỳ nhỏ và P phải rất ăn may mới ra đúng cổng mà không có chìa, đến nỗi ta phải chắc chắn P biết mật khẩu thực sự
+
+Năm 1980, Schnorr Identification Protocol ra đời đã thực sự ứng dụng ZKP vào mật mã hiện đại
+
+-> Interactive ZKP
+V và P phải trao đổi với nhau message để chứng minh statement của V là đúng. Như trên thì P và V phải cùng nhau tham gia, V phải thấy B đi ra ở cổng B trực tiếp mới biết statement của V là đúng và làm nhiều lần để chứng minh P có khóa. Tức V đưa ra hàng loạt challenge và chờ P hồi đáp
+
+Giao thức Schnorr Identification Protocol: P cần chứng minh cho V là mình sở hữu pivkey của 1 pubkey mà không tiết lộ pivkey
+P có khóa công khai PKa = g^a mod p và khóa bí mật SKa = a => giống với Diffie-Hellman và thuật toán chữ ký ECDSA
+P chọn random k (từ 1->q) và tính h=g^k mod p gửi cho V để bắt đầu xác thực
+V gửi lại 1 challenge là số random c
+P tính s = ac + k mod q gửi cho V
+V lúc này có: s, g^a mod p (public key), h, g, c => g^s == publickey^c x h mod p thì đúng
+=> k 2 lần giống nhau sẽ bị phá 
+
+-> Non interactive ZKP
+VD P cần chứng minh 1 website rằng mình trên 18 tuổi mà không tiết lộ tuổi của mình. 2 bên cũng k cần trao đổi qua lại nhiều thông tin như interactive để xác nhận điều đó.
+Dùng Schnorr Identification Protocol cải tiến thành Fiat-Shamir Transform để tạo non-interactive.
+
+P có khóa công khai PKa = g^a mod p và khóa bí mật SKa = a
+P sinh random r và tính h = H("I am over 18 years old" || r) với H là hàm hash 
+P ký hash bằng pivkey là có signature s = Sign(h,a)
+P gửi publickey và signature tới website
+Website lấy về giải mã thành h, sinh radom challenge value c và tính R = g^c * h^-s
+Website check g^c = R*h^s => nếu h = "I am over 18 years old" thì đúng
+
+=> Hàm hash với r random ban đầu chỉ là để sinh ra signature luôn random ở mỗi lần
+=> Cơ chế là P ký message, V lấy message đó đúng thì ok. Nhưng ví dụ ở trên k chuẩn trong thực tế vì 1 message chay như v P bịa ra được, thực tế có thể cho nó là 1 con dấu của 1 tổ chức chứng minh là đủ 18 tuổi.
+
+=> Thực tế trong zksync, ta bao nó trong hộp đen và nó xử lý bao gồm cả việc của tổ chức uy tín kia.
+Input -> Mạch ZKSync -> Ouput proof
+
+Lúc offline phía prover, hắn đưa mọi thông tin vào input là bất cứ cái gì cũng được và mạch sinh ra proof
+Mạch ZKSync public cho tất cả mọi người để biết được là cái proof sinh ra đã thỏa mãn những điều kiện gì
+Bất cứ ai cũng có thể verify được prover có thực sự sở hữu các thông tin input thỏa mãn điều kiện đưa ra không
+
+ZKSync chỉ là 1 dự án mà ta k cần quan tâm, thứ ta quan tâm là dùng zero knowledge proof.
+
+Zero knowledge proof được implement bởi thuật toán mã hóa mà thực tế. Vc sinh proof luôn được thực hiện phía server offline. Người dùng có thể tạo proof offline rồi dùng smart contract trên blockchain verify proof là được, thay vì phải thực hiện lại logic thì chỉ cần verify proof. Có thể tạo 1 server verify proof mà k cần dùng blockchain, ZKP là ứng dụng mã hóa trong nhiều lĩnh vực chứ k chỉ blockchain.
+
+VD dùng đan xen ZKP ứng dụng trong blockchain: ta cung data cho người dùng offchain và người dùng sẽ phải trả phí để sử dụng data. 
+Cơ chế có thể là mã hóa data muốn bán bằng public key và đưa lên blockchain. Khi người dùng thanh toán thì đưa lại họ private key để họ giải mã và sử dụng data. Để làm protocol an toàn hơn thì có thể dùng zkp để chứng minh đoạn hash ta có là data thực sự chứ kp là 1 dãy bừa tự bịa ra mà đem đi bán
+Input: văn bản, hash
+Mạch: verify hash đúng là từ văn bản
+Output: proof
+Verifier có thể chứng minh proof đúng tức mã hash đó đúng là hash từ 1 văn bản, nhưng làm sao để chứng minh văn bản đó có nghĩa thì k thể nào, phân tích ngữ nghĩa thì mạch circom k xử lý phức tạp v được nên k làm được. 
+
+Do đó zkp ứng dụng nó k có nhiều. VD verifier 1 người trên 18 tuổi tức ta chỉ verify được rằng 1 người input vào 1 con số lớn hơn 18 chứ k nói lên điều gì về tuổi thực của họ. Nếu người đó có 1 văn bản thực sự của pháp luật nói rằng họ trên 18 tuổi mà văn bản đó k tiết lộ tuổi thực thì có thể show lên văn bản đó luôn, cần éo gì dùng zkp.
+Do đó sẽ hợp lý hơn nếu người đó chỉ có 1 văn bản pháp luật nói lên số tuổi thực của họ và nhét văn bản đó vào mạch để xử lý xác thực. Vì thực tế làm gì có tổ chức nào cung hẳn 1 văn bản chỉ để xác nhận trên 18 tuổi mà k tiết lộ tuổi thực. Ứng dụng zkp hẳn là ở đó.
+
+Nhanh: zkp chỉ giúp chứng minh 1 người có thể nhập vào input 1 giá trị thỏa mãn 1 mạch logic. Còn input đó có giá trị thực ra sao hay chỉ là bịa đặt thì phải dùng thêm nhiều biện pháp đi kèm, hoặc không thì zkp ở đây éo có vai trò mẹ gì. Tốt nhất là input phải đi kèm 1 thứ đáng tin cậy unique gắn với người đó (như chứng minh thư chẳng hạn)
+VD: Xác thực 1 người là thành viên của group mà k cần show chức quyền hiện tại là gì thì input vào thẻ thành viên, chỉ xác thực được là họ từng có 1 thẻ thành viên thỏa mãn mạch, rõ ràng họ có thể mượn được thẻ thành viên của người khác để tạo ra proof đó, phải dùng thêm biện pháp khác để xác thực
+
+
+
+# Setup
+-> Cài đặt:
+Phải cài Rust vì circom compiler bản mới nhất được viết bằng Rust chứ k còn bằng JS. Muốn cài rust lại phải có visual studio installer
+Cài chi tiết trong docs bao gồm cả compile các thứ
+Có rust sẽ tự cài cargo là 1 loại package giúp install các package khác
+Build xong cục circom, nó tự thêm vào environment path cho ta nên dùng được lệnh (circom --help) từ đó
+
+Circom để compile circom
+snarkjs là npm package nhận vào artifacts sinh bởi file circom, rồi có thể dùng để generate và validate ZK Proof => snark --help tìm các lệnh
+Các phase để chạy mạch là độc lập nhau
+
+-> Để compile circuit: => cần mạch circom
+circom test.circom --r1cs --wasm --sym --c --inspect 
+--r1cs: sinh ra file test.r1cs chứa R1CS constraint system của mạch dưới dạng binary
+--wasm: sinh directory test_js chứa wasm code (test.wasm) các file cần thiết để sinh ra witness
+--sym: sinh file test.sym là symbol file cần để debug hoặc in ra constraint system 
+--c: sinh directory test_cpp chứa nhiều file(test.cpp, test.dat, main.cpp, MakeFile,...) cần để compile C code và sinh ra witness => k dùng C++ code để tạo bằng chứng thì bỏ đi
+--inspect: sẽ inspect code tìm các lỗi warning hay error báo ra. VD 1 signal mà k nằm trong constraint nào thì sẽ warning. Có thể dùng t*0 === 0 để fix => ref tới "# Signal / --inspect option"
+=> Dùng c++ compile mạch to sẽ nhanh hơn, nhưng k chạy được trên MAC
+Bước này cũng hiện thị số lượng constraint để lấy file ptau cho hợp lý
+
+Có thể dùng option -o để xđ thư mục chứa file tạo ra
+Nếu dùng include trong file thì options -l sẽ giúp xđ thêm thư mục mà chỉ thị này tìm kiếm
+
+-> Để tính witness: => cần có input file
+Circom compiler sau khi chạy lệnh sẽ sinh ra 2 loại file là wasm và c++ code. Ta sẽ sinh bằng chứng lưu trong file witness.wtns. File witness thực tế được cấu thành từ tập input, intermediate signal và output.
+C1: Tạo witness bằng wasm binary và js file
+Lưu input vào file json. VD file input.json: {"a": "3", "b": "11"} => dùng string cho số vì js handle số lớn k tốt
+cd vào thư mục_js và thêm vào file json và chạy lệnh: 
+node generate_witness.js <tên file>.wasm input.json witness.wtns
+
+C2: Tạo witness bằng code C++
+cd vào thư mục _cpp và chạy "make" => sinh ra file output. Thực tế có thể phải install thêm 1 số lib nếu thiếu để chạy file C++. 
+Thêm vào file input.json và chạy lệnh: ./<file exectable> input.json witness.wtns
+
+-> Tạo bằng chứng: 
+Phải dùng snarkjs để dùng Groth16 zk-SNARK protocol. Để dùng nó cần sinh ra trusted setup gồm 2 giai đoạn:
+1) Power of tau độc lập với circuit: phase độc lập sinh ptau (trusted setup)
+Lỗi k thực hiện được thì đổi thử sang cmd thay vì dùng powershell terminal
+
+Tạo 1 power of tau ceremony mới: snarkjs powersoftau new bn128 12 pot12_0000.ptau -v
+Contribute to ceremony: snarkjs powersoftau contribute pot12_0000.ptau pot12_0001.ptau --name="First contribution" -v => contribute cần write càng nhiều random value for entropy, có thể lặp thao tác này nh lần
+=> Tất cả chỉ để có 2 file pot12_0001.ptau => or tải trên mạng về
+2) Phase 2 phụ thuộc vào circuit => cần circuit sinh ra zkey
+Bắt đầu phase 2: snarkjs powersoftau prepare phase2 pot12_0001.ptau pot12_final.ptau -v => sinh ra file pot12_final.ptau
+=> Bước cho đến chỗ này nên bỏ vì chạy rất lâu, thay vì v ta chạy: 
+snarkjs r1cs info <file>.r1cs 
+để lấy thông tin của file file này xem có bnh constraint và tải loại file ptau tương ứng trên: https://github.com/iden3/snarkjs?fbclid=IwAR0hkHvMZDrCEJqr2rxMRxL4kMz6loDLU_rnTGB12XVBwnbff0GUmGVRos8
+Mạch càng lớn chạy càng lâu và file ptau càng lớn
+Trong 1 dự án dùng nhiều mạch thì chỉ cần có 1 file ptau bao lượng constraint lớn nhất là được
+Để an toàn còn có lệnh kiểm chứng file ptau là chuẩn: snarkjs powersoftau verify <file>.ptau
+
+Start zkey mới: => cần zkey sinh ra 
+snarkjs groth16 setup <tên file r1cs>.r1cs pot12_final.ptau testfile_0000.zkey => sinh ra testfile_0000.zkey
+Contribute to phase 2 ceremony: snarkjs zkey contribute testfile_0000.zkey testfile_0001.zkey --name="1st Contributor Name" -v => tương tự như khi contribute ptau, có thể lặp nhiều lần 
+=> ***ref tới Project BattleZip***: có đầy đủ setup ptau và zkey
+=> sinh ra testfile_0001.zkey
+Export verification key: snarkjs zkey export verificationkey testfile_0001.zkey verification_key.json
+=> cuối cùng sinh ra verification_key.json
+
+Sinh proof: => cần zkey và witness
+snarkjs groth16 prove testfile_0001.zkey witness.wtns proof.json public.json 
+Đầu ra proof là 2 file: proof.json chứa proof và public.json chứa giá trị public input và output
+=> Chỗ này nếu mạch có lỗi sẽ chạy ra lỗi. Vd mạch có những 2 output là lỗi ngay
+
+=> ref tới "Project BattleZip / folder scripts"
+
+-> Verify bằng chứng: => cần proof
+C1: Verify bằng server js bth
+Chạy lệnh: snarkjs groth16 verify verification_key.json public.json proof.json
+=> Sẽ check proof.json hợp lệ thì trả ra ok
+
+C2: Verify với SM
+Sinh solidity code: snarkjs zkey export solidityverifier multiplier2_0001.zkey verifier.sol
+File sol chứa 2 contract Pairing and Verifier. Chỉ cần deploy Verifier contract có hàm view là verifyProof trả true nếu proof và input là đúng. 
+Để test lệnh call thử thì chạy: snarkjs generatecall -> lấy ra output và cho làm tham số của hàm verifyProof sẽ thấy. Chỉ cần sửa 1 bit trong parameter là thành verify false ngay.
+
+-> Nhanh:
+circom test.circom --r1cs --wasm --sym --inspect
+input.json trong test_js: {"a": "3", "b": "11"}
+cd test_js
+node generate_witness.js test.wasm input.json witness.wtns
+cd ..
+snarkjs r1cs info test.r1cs 
+Tải ptau
+snarkjs groth16 setup test.r1cs <file>.ptau test_0000.zkey
+snarkjs zkey contribute test_0000.zkey test_0001.zkey --name="1st Contributor Name" -v
+snarkjs zkey export verificationkey test_0001.zkey verification_key.json
+copy file witness.wtns
+snarkjs groth16 prove test_0001.zkey witness.wtns proof.json public.json
+snarkjs groth16 verify verification_key.json public.json proof.json
+
+-> Nhanh hơn
+circom test.circom --r1cs --wasm --sym
+
+input.json trong test_js: {"a": "3", "b": "11"} => public input phải để lên đầu
+
+cd test_js
+node generate_witness.js test.wasm input.json witness.wtns
+cd ..
+snarkjs groth16 setup test.r1cs powersOfTau28_hez_final_08.ptau test_0000.zkey
+snarkjs zkey contribute test_0000.zkey test_0001.zkey --name="1st Contributor Name" -v
+
+123
+snarkjs zkey export verificationkey test_0001.zkey verification_key.json
+
+copy file witness.wtns
+
+snarkjs groth16 prove test_0001.zkey witness.wtns proof.json public.json
+snarkjs groth16 verify verification_key.json public.json proof.json
+
+=> iden3 github có sẵn hàng loạt mạch và cung nhiều thư viện chức năng giúp tạo mạch circom dễ dàng
+Còn có snarklib cung C++ template library for zero knowledge proofs
+
+-> circom có 2 compilation phase:
+construction phase: sinh constraint
+code generation phase: sinh code to compute witness
+=> 1 trong 2 phase error sẽ trả error code > 0, thành công trả ra 0
+
+3 loại message:
+hints: code được phép nhưng uncommon, ít ai dùng như V
+warning: k nên code như v, nếu chủ động gây ra thì ta thường thêm --inspect option
+error
+
+-> ref tới ảnh "Cơ chế compile"
+file wasm là kết hợp input và ouput của chương trình, từ đó cho ra witness 
+ptau được lấy tùy thuộc vào số lượng constraints: https://github.com/iden3/snarkjs/blob/master/README.md
+file wtns + zkey cho ra public data và proof
+
+Thứ tự các bước: đầu tiên tạo ra file constraints để chứng thực bằng circom -> compile ra file r1cs, file này hiển thị số lượng constraints -> tải file ptau trên mạng về tương ứng với số lượng constraint đó -> kết hợp 2 file lại lấy ra zkey ở trong build time(nên lâu cũng được) -> Khi muốn chứng thực thì người dùng phải cung vào input -> wasm xử lý input và file circom để biến nó thành 1 file wtns -> file wtns kết hợp với file zkey cho ra public và proof
+=> Public là data đầu ra, còn proof là 1 chuỗi các data được cấu trúc đúng
+-> Từ file circom chạy lệnh của snark build ra contract solidity(thực tế bulid được ra cả contract bên cosmos hay các mạng khác nhưng phải học thêm). File sol đó có hàm nhận vào proof cho ra kết quả true or false. Thực tế nếu input sai, ta còn k xây được file wasm luôn chứ. 
+Như v người dùng k cần public input vẫn xác thực được 1 thứ gì khác
+
+File ptau càng lớn thì càng nặng, file có 1M constraint nặng tới 1GB, file nặng thì build ra zkey rất lâu, có thể mất vài ngày
+
+
+
+
+# Signal
+Input signal của 1 mạch luôn lấy từ nơi gọi nó nên luôn là có giá trị rồi và k được gán nx
+
+Signal là thành phần chính trong mạch lưu biến tuân theo các constraint, các var thì không. Signal luôn nằm đúng chiều mũi tên để gán giá trị cho đúng 1 signal đó, phía ngược lại là biến or expression, signal khác thoải mái.
+
+Trong compile time thì signal luôn là unknown kể cả khi đã gán giá trị constant cho nó. Do đó sẽ lỗi nếu output signal gán giá trị mà phụ thuộc vào 1 logic không rõ ràng. 
+VD:
+ signal input in;
+ signal output outA; 
+ var i = 0; var out = 0;
+   while (i < in){
+     out++; i++;
+   }
+ outA <== out;
+=> lỗi vì signal in lúc compile là unknown nên vòng while k rõ ràng mà đầu ra outA lại phụ thuộc vào logic đó
+
+Signal và component phải khai báo ở top level block. Ở phiên bản mới có thể khai báo signal ở trong condition với đk condition phải known từ compiletime
+1 component chỉ có thể truy cập mọi signal của component nested bên trong. K truy cập được vào signal nested của nested components
+
+-> Varible là non signal data và mutable
+
+Phép gán bằng k trả về giá trị, đừng gộp như này là sai: a = (b = 3) + 2; or if(a=3){...}
+
+Các thao tác khác về toán và logic k đổi
+
+số p là 1 só nguyên tố cực kỳ lớn. Mọi số trong circom đều là mod của số đó, gọi là tập pZ
+
+Phép ** và **=
+Chỉ có a++, k có chiều ngược lại
+~= complement, ^= phép xor, >>= phép dịch phải
+
+x << k = x/(2^k) và k phải <= p/2
+
+-> Operator ?_:_ chỉ được dùng ở top level
+
+-> Lỗi scalar:
+Code k được có quá nhiều output or k có output nào 
+=> Lỗi scalar rất khó hiểu, thậm chí có phép nhân rồi vẫn bị bth
+
+Trong mạch circom k được chỉ có phép cộng trừ, buộc phải có ít nhất 1 phép nhân. Vì khi compile, groth cho input đi qua các cổng ra output. Mạch ta tạo ra được tách riêng thành các cổng khác nhau cho từng constraints. Nó bỏ qua các cổng cộng và chỉ lấy các cổng nhân. Do đó k có cổng nhân nào thì coi như mạch k có gì vì k có cổng liên kết các cổng cộng lại với nhau
+
+VD ứng dụng circom thực sự có ích: tạo 1 circom nhận private input là private key, public input là address, mạch dùng private key tạo ra address để chứng minh sở hữu private key của 1 address
+circom giúp che dấu private input là điểm lợi 1 
+điểm lợi 2 là tách cục code trong solidity dùng trong hàm verify của circom thì hàm nhỏ sẽ lỗ gas, hàm lớn sẽ lợi gas hơn. Nên nhớ do transaction gọi 1 hàm getter sẽ payfee thêm của mọi logic trong hàm getter đó
+
+1/0 thì lỗi, 1/in và in = 0 thì không báo lỗi. Signal mặc định là 0
+Khi mạch lỗi sẽ bỏ qua nếu dùng <-- nên 1/0 ra 0 => chứ kp overflow k hợp lý. Phép toán trên circom là trên trường số hữu hạn
+
+-> Phép toán trên trường số hữu hạn:
+1/2 = 10944121435919637611123202872628637544274182200208017171849102093287904247809 = x
+với max trường hữu hạn nguyên là p = 21888242871839275222246405745257275088548364400416034343698204186575808495617
+=> trong circom không tồn tại float point. Nên phép chia thực chất là phép nhân nghịch đảo của số đó modulo p
+Thực vậy: 2*x = 21888242871839275222246405745257275088548364400416034343698204186575808495617 + 1 = 1 (modulo p)
+Tính: 1/2 (mod p) = x => 2*x = 1 (mod p) quy về phép nhân => mà 2 < 1 nên 2*x = 1 + p => x = (p + 1)/2
+
+-> tuple và array
+
+-> --inspect option: dùng để cải thiện tính secure của mạch
+signal mà k gắn với constraint nào, hoặc gọi 1 component khác có signal như v, hoặc output của component chả dùng trong constraint nào cả sẽ báo warning. Dùng _ <== signal làm mất warning vì ta chủ động bảo compiler là signal này k được dùng trong constraint nào cả
+
+--inspect option tự động xđ phần code <-- mà nên được chuyển đổi thành <== 
+VD: out <-- in / 4;
+out*4 === in;
+=> replace thành out <== in/4 
+
+
+
+# Template
+Như 1 circuit object mới, nếu k được gọi từ hàm main thì input của nó được truyền từ 1 circuit khác
+
+Params của 1 template phải rõ từ compile time, VD truyền input signal làm params là sai vì compile time nó là unknown
+
+-> Custom template là 1 cái vớ vẩn k có component hay constraint bên trong
+Dùng phải thêm pragma custom_templates; => có rất nhiều pragma cung nhiều tính năng khác nhau
+Snarkjs thay vì sinh r1cs constraint như với template bth, nó sẽ xử lý custom template ở giai đoạn sau, sử dụng PLONK scheme khi generate và validate zkproof sẽ export thông tin về custom template vào file r1cs
+
+-> Function để xử lý logic, k được có signal mà chỉ thao tác với biến
+
+
+
+# Component
+Component chỉ hoàn tất việc khởi tạo và bắt đầu chạy khi mọi input của nó đều được gán đủ giá trị. VD signal input của 1 template là mảng 2 phần tử thì mạch sẽ chỉ chạy khi cả 2 phần tử đều được gán giá trị. Chỉ khi đó mới truy cập được output signal của mạch đó. Mạch nào gán đủ giá trị trước sẽ được khởi tạo trước chứ k qt thứ tự trong code
+
+Từ khóa parallel có thể thêm vào template or từng lúc khởi tạo component. Chỉ dùng khi các components hay template lớn, khi đó sẽ được xử lý độc lập. Nó chỉ có hiệu lực khi dùng C++ để generate witness. Dùng khi các components độc lập k phụ thuộc vào output của nhau, vc tính toán có thể thực hiện song song. Có thể parallel ở cấp độ template or từng component
+
+1 file circom có thể k có component main và chỉ được có 1 main comp. Kể cả các file include cũng coi là phần code đó và k được có main nếu file này đã có
+
+-> Anonymous component
+
+
+
+# include
+circomlib của iden3 cung sẵn các file circom như các thuật toán mã hóa, phép tính,..
+include file đó vào có thể dùng các template và function bên trong.
+
+
+
+# Constraint
+1 phép là constraint sẽ check lỗi. Nếu lỗi sẽ dừng mạch ngay.
+1 phép không là constraint sẽ k check lỗi và mạch vẫn chạy bất chấp phép đó có thể gây lỗi.
+
+Có 2 phép constraint thông dụng là: === và <==
+Phép đầu tiên sẽ dừng mạch nếu 2 vế k bằng nhau
+Phép thứ 2 sẽ dừng mạch nếu expression bên trái k hợp lệ. VD x <== a/b mà a không chia hết cho b sẽ k thỏa mãn constraint này và bị dừng mạch
+Var thì có thể so sánh, tính toán thoải mái với các phép toán bth
+Signal thì bị hạn chế, ta hiểu code circom thì các signal ban đầu là unknown và mọi phần code gán signal output đều phải được rõ ràng từ thời điểm compile.
+Do đó:
+- Signal k thể so sánh < or > với 1 signal khác vì chúng là unknown. Signal k thể ss với 1 số vì output đầu ra k được phụ thuộc vào 1 logic k rõ ràng, nó unknown nên lúc compile k rõ phép if else đó chạy như nào. Điều đb là nếu phép ss 1 số với 1 signal mà k ảnh hưởng gì tới output(bất kể if else chạy vào đâu) thì nó vẫn k báo lỗi
+- Signal chỉ có thể dùng phép số học cơ bản như cộng trừ nhân chia dịch bit với 1 signal or 1 số khác. Signal có thể gán bằng or ss bằng với constraint
+- Có thể gán var cho signal nhưng k gán signal cho var => signal immutable và rất chặt chẽ, gán cho var đc thì ss đc mất r
+signal mặc định là private chỉ trừ ouput mạch hàm main và các tham số specific là public trong hàm main
+Mọi constraint trong circom đều là quadratic của dạng (A*B + C = 0), nó luôn biến đổi được về dạng đó.
+Nếu không sẽ lỗi. VD:
+template multi3() {
+     signal input in;
+     signal input in2;
+     signal input in3;
+     signal output out;
+     out <== in*in2*in3;
+}
+=> lỗi vì in*in2*in3 không là quadratic mà là bậc 3 mất r
+Phép gán out <== 1 - a*b; tương đương với:
+out === 1 - a*b;
+out <-- 1 - a*b;
+Khi constrains được đặt trong block conditional hay loop thì phần điều kiện k được phép unknown mà phải xđ giá trị rõ. NN là vì vc sinh constraints phải là unique và không phụ thuộc vào unknown input signal.
+Constraint phụ thuộc vào biến, biến nằm trong loop hay condition thì phần dk vẫn k được unknown
+
+-> unknown
+Cái gì dùng unknown data cũng là unknown.
+If else mà condition unknown thì cả block của nó cũng là unknown. Tương tự for loop hay array[<biến unknown>]
+
+
+
+# Tag
+main copmonent input k được có tag
+tag sẽ tự kế thừa dù gán 1 input có tag cho 1 input k có tag
+tag do ta tự implement và compiler k check validity của nó
+Chỉ signal có tag mới truyền giá trị được vào 1 signal input có cùng tag đó. Các signal intermediate hay output gán thoải mái
+
+Tag with value:
+value của tag phải xđ rõ tại thời điểm compile time. Có thể gán và lấy giá trị.
+signal chỉ có thể gán tag value trước khi nó có được gán giá trị thực tế
+Mọi phần tử của signal array đều có chung tag value và lấy được thông qua tên array luôn
+
+
+
+# assert keyword
+- assert nằm trong condition như if else chẳng hạn mà điều kiện đã rõ ràng, boolean expression của nó cũng tính được giá trị từ lúc compile thì assert sẽ được xử lý từ lúc compile báo lỗi hoặc không
+- assert mà unknown (k thỏa mãn bên trên) thì nó tự được thêm vào witness generation code. Tức witness sinh ra phải thỏa mãn nó mới được, nếu k sẽ fail to generate witness
+
+
+
+# Tool khác
+circomlib => lib cung template mạch có sẵn
+circomlibjs => js lib cung program tính sẵn witness cho nhiều mạch trong circomlib ồi
+circom_tester => test mạch nhanh
+ffjavascript => npm package thực hiện sẵn các operation trong js
+
+
+
+# Other
+-> Commitment scheme:
+1 hình thức trong đời sống k dùng ZKP
+
+VD kỹ thuật: 1 người sở hữu 2 số 15 và 5, người đó k muốn lộ ra rằng họ đang sở hữu chính xác 2 số đó nhưng vẫn chứng minh được với tất cả là họ sở hữu 2 số có tổng là 20
+Họ cung ra 2 số 10^15 và 10^5, mọi người xác thực rằng 10^15*10^5 đúng bằng 10^20 nên xác thực được là người kia sở hữu 2 số có tổng là 20, thực tế k ổn vì từ 10^15 họ truy ngược ra được số 15 nên k nói làm gì
+=> Nó chỉ ổn khi 10^x là hàm 1 chiều ở trên. Giả sử nó đúng là hàm 1 chiều đi thì đây chính là ZKP trong thực tế. Thuật toán đương nhiên phải phức tạp
+Dùng signature không giúp ta thực hiện điều này. Signature giúp ta chứng minh ta đã ký 1 cái gì đó mà thôi. VD ta ký 1 message thì người ta dùng public key sẽ biết được ta đã ký 1 message và đương nhiên cả message và đầu ra phải public.
+=> ZKP sẽ giúp ta chứng minh bằng cách nhét input vào mạch và lấy bằng chứng ra là xong
+
+VD bên thứ 3: Alice muốn chứng minh mình trên 18 tuổi mà k làm lộ tuổi của mình. Alice mà nói thì k ai tin nhưng nếu có 1 bên thứ 3 đáng tin cậy như cơ quan nhà nước nói thì chắc chắn mn sẽ tin. Nếu Alice show chứng minh thư ra thì cũng tương tự là show 1 chứng thực của bên thứ 3 nhưng sẽ lộ tuổi mất. Cách duy nhất là bảo bên thứ 3 nói lại với bên kia là Alice đủ tuổi thì họ sẽ tin. Nhưng bên thứ 3 đáng tin cậy thì rất khó.
+=> ZKP sẽ giúp chứng minh bằng cách nhét input tuổi vào mạch và lấy ra bằng chứng. Mạch đó thay thế bên thứ 3 nhưng điều đb là tuổi k lộ ra cho ai cả
+
+-> circom dựa trên RUST, nhưng ta k cần học RUST để dùng circom
+

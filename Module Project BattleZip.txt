@@ -1,0 +1,149 @@
+Xây dựng 1 ứng dụng game solidity + circom + SnarkJS. Dùng socket chạy giao diện.
+Reverse Engineer project
+URL: https://www.youtube.com/watch?app=desktop&v=CgtNEALhJ3s&list=PLWACGbvIsEgn44LlTiPgVkOC4nG8tnJX-&index=1&t=39s&fbclid=IwAR0kPSPdOUPaQS73OuzWiXIrmUZGj7B_HceciXz-ChjP_-mhsSwN7KJMqmQ
+
+
+
+# Setup
+CTRL + SHIFT + V => preview file md
+
+POT15 nó chạy chính là yêu cầu ta dùng ptau 15 là max 2^15 constraints trong ứng dụng này
+Link youtube chứa url tới list ptau từng cấp độ. File ptau 28 đã là 300GB r
+
+Các file zk như zkey có thể host lên ipfs vì nó public, xong frontend cần encrypt hay làm gì dùng nó thì request http về dùng. K cần server.
+Đổi circuit sẽ k cần compile lại ptau nhưng phải sinh lại witness
+
+SnarkJS hiện chưa support typescript
+SnarkJS hiện tại có thể deploy lên mọi mạng EVM-based mà k cần config gì thêm. Nhưng với các mạng khác thì hiện rất khó. VD: https://github.com/piotr-roslaniec/solana-riptide-2022
+
+
+
+# Nếu ta tự làm game bắn tàu bằng solidity:
+Luật chơi:
+2 bên sắp xếp đội hình
+2 bên bắn lần lượt (hoặc 1 bên bắn trượt thì bên kia được bắn tiếp)
+Bên nào bắn hết các vị trí chỉ định là thắng và reset lại từ đầu
+
+Các tính năng logic khác: 
+2 bên phải khóa cùng 1 lượng tiền vào, thắng thua thì chia
+Bên nào k đánh hay bị lỗi gì thì bị giới hạn, quá time thì có thể căn cứ vào số tàu bị phá mà chia tiền
+1 người khóa tiền vào mà mãi k chơi thì 2 bên có thể hủy và rút
+Có thể dùng cơ chế tạo phòng của socket như oẳn tù tì
+
+Thứ cần lưu:
+Trạng thái bàn hiện tại, bị giới hạn 16x16
+3 loại ô: có tàu chưa bị bắn hạ, ô đã bị bắn, ô k có gì
+
+Luồng solidity lần lượt:
+Bên 1 submit bàn, bên 2 submit bàn
+check 2 bàn phải hợp lệ vì các tàu có kích thước nhất định
+Start game sau khi đã khóa đủ token và tàu 2 bên xếp xong
+Bên 1 đánh: check lượt hiện tại đúng của bên 1, update trạng thái ô bị bắn, check ô bị bắn chưa từng bị bắn từ trước
+Bắn xong check game kết thúc chưa: khi tàu đối thủ bị bắn hết hoặc kín bàn
+Game over thì unlock cho ô thắng claim và set mọi thứ lại từ đầu
+
+Rules khác:
+1 game được tạo từ 1 cặp người chơi, 2 người chơi giống nhau k thể tạo ra 2 game khác nhau nếu game cũ chưa xong
+
+Data cần lấy duy nhất là trạng thai board hiện tại và thông tin game (bnh tiền các thứ), thông tin 2 người chơi
+Mỗi lần đánh là thực hiện 1 tx
+
+Giải quyết vấn đề che giấu thông tin: Vì mọi thông tin trên blockchain là công khai thì sao cản 1 người tìm xem người kia đánh cái gì
+=> Dùng như battlehand, lưu trên contract đoạn hash của board thôi, còn data thật phải dựng 1 server để lưu. Thực ra ta có thể k dùng server mà tìm cách lưu ở máy client nhưng rất k an toàn vì nếu người dùng chuyển máy khác thì mất data. Nhưng dùng server thì bị tập trung.
+
+Các hàm chính trong game: submit đội hình và bắn 
+
+-> Với project này để đơn giản hóa, chỉ tập trung làm tính năng game, các tính năng về tiền bỏ qua.
+
+Rule basic hơn: 
+Kích thước tàu cố định [5,4,3,3,2]
+Board là cố định 10x10
+2 người phải bắn luân phiên nhau
+Với cơ chế bảo mật vẫn giữ nguyên nhưng k cần dựng server mà lưu máy client cho đơn giản (chú ý người dùng đổi máy sẽ mất)
+
+
+
+# Cơ chế
+-> Solidity
+
+4 hàm logic game:
+- Player 1 create a new game:
+Cung vào 1 board và dùng circom xác thực board đó hợp lệ(các tàu k bị lọt ra ngoài màn)
+- Player 2 join game có sẵn: tương tự cung vào 1 board
+- Hàm firstTurn lưu shot và tăng nonce từ 0 thành 1
+- Hàm xử lý từng turn người dùng bắn: 
+Turn thứ 2 nó mới bắt đầu check xử lý turn người trước bắn trúng hay trượt. 
+Để check xử lý, nó dùng circom nhận vào vị trí bắn, board hash, biến boolean trúng hay trượt
+
+Còn lại các xử lý game over hay update state khá là basic, phần khó là các hàm circom 
+
+Cơ chế bảo mật:
+Mọi thứ lưu trong state của Ethereum là public, nhưng nếu ta truyền vào function, xong k lưu trong state của Ethereum, thì nó vẫn k bị lộ. Mỗi lần 1 người bắn tàu, (giả sử chưa có circom) contract buộc phải lưu trạng thái board vào state để check logic phát bắn đó chuẩn hay không. Mà k để lộ nên buộc lưu boardHash vào state Ethereum.
+Mỗi phát bắn, buộc phải truyền vào đúng boardHash và board gốc để contract check boardHash = hash(board gốc) thì thao tác như bth check với data là board gốc. Nhưng rõ ràng board gốc chỉ người tạo mới sở hữu mà logic bth là 1 người bắn sẽ check với board của đối thủ. 
+=> Do đó giải pháp là turn sau bắn mới check hit shot của turn trước đó vì người sau bắn họ mới cung vào được board gốc của mình để check phát bắn trước đó của đối thủ
+
+=> Cách này sẽ k áp dụng với bắn tàu kiểu "nếu bắn trúng sẽ được bắn tiếp", với game kiểu đó phải nghĩ cơ chế khác.
+Đây là logic game cơ bản 2 người, kp game nào cũng như v. Với các dòng game NFT, họ cho phép người chơi game thao tác như bth, nhưng chỉ mua bán NFT với các vật phẩm trong game thôi, như v sẽ tùy biến được với mọi game.
+
+-> Circom
+Có 2 mạch: board check vị trí tàu trong board hợp lệ hay không; shot check xem 1 shot có hit hay không
+
+--> Thực tế circom k giúp che giấu thông tin mà chỉ giúp giảm gas cho logic. Vd ở đây logic check board game code solidity sẽ rất dài và tốn gas nên người ta mới viết mạch cho nó => hiểu sai: params của function solidity là public nhé, dùng zkp có điểm lợi bắt buộc là che dấu private input truyền vào mạch. Các params sinh ra truyền vào mạch, người dùng k thể decode ngược lại params thực được
+Khi tạo 1 game mới, ta sẽ check tàu nằm trong board và tàu k bị conflict, nếu thỏa mãn thì lưu hash của cái board đó lại. 
+
+Do đó board.circom nhận private input là vị trí và kích thước tàu, public input là boardhash sau khi đã xếp tàu vào. Nó k trả output mà chỉ check nếu các tàu k bị conflict và nằm trong board. Thế thì nhận boardhash làm gì? Nên nhớ ta lưu boardhash lại nhưng nếu chỉ check tàu thì làm sao biết cái boardhash kia khớp với các tàu hiện tại. Do đó phải check đúng là board đó thì mới lưu. 
+
+Private input của circom thực tế bị biến đổi thông qua snark js và phải truyền theo quy định của nó chứ kp truyền trực tiếp như public input đâu.
+
+--> Thực tế circom không giúp check 1 câu điều kiện hay không mà chỉ giúp check 1 condition là đúng hay sai. Nên ta k thể đưa vào 1 boardhash + 1 shot và check xem shot này có hit hay không được. Mà frontend có board nên phải tự check từ trước là hit hay miss rồi truyền vào contract gọi mạch với "boardhash + hitInt + shot" để verify true hay false là phát đạn này trúng chẳng hạn. Phải đúng mới được đi tiếp.
+shot.circom: nhận boardhash + hitInt + shot và trả ra hitInt là true hay false
+
+Nếu k dùng circom ở case này thì phải viết code solidity để check "shot + boardhash" có hit hay miss. Nhưng dùng circom để giảm logic ở đây lại chỉ check được true false nên phải truyền thêm biến hitInt được tính sẵn ở frontend rất mất tg. Ta làm v cũng chỉ vì đỡ phí gas 1 tí nhưng code check cả ở front, cả ở circom hết hơi.
+
+Circom code rất phức tạp, nó k lưu state board sau khi bị bắn các thứ mà để check phát bắn sau k trùng phát bắn trước, nó lưu thẳng phát bắn ở Ethereum luôn vì k cần bảo mật xong lấy ra check bằng solidity. Cần kết hợp solidity khéo léo vì nếu ở đây check phát bắn trùng mà làm trong circom thì code rất khổ
+=> Ta coi circom như 1 hàm internal phục vụ check, k thể gọi được từ ngoài là xong. 
+
+Circom k check phát bắn có trúng ô có giá trị 1 trên cái board hay không. Mà nó nhận vào các tàu rồi check tàu có chứa phát shot đó hay không là được
+
+
+
+# circom_tester
+Mỗi lần sửa file circom phải rerun lại mọi thứ để test thì package circom_tester sẽ giúp test mạch nhanh và test logic tốt hơn. Sau khi test ngon mới dùng SnarkJS
+Test sử dụng SnarkJS luôn
+
+Chay test: 
+node
+const { ethers } = require("ethers")
+let wallet = ethers.Wallet.createRandom()
+let mnemonic = wallet._mnemonic().phrase
+mnemonic
+=> thêm mnemonic vào .env
+yarn test 
+
+=> cái mnemonic này có tiền của mạng test hardhat
+
+Lỗi "Could not allocate 268369920 bytes. This may cause severe instability. Trying with 134184960 bytes" là do setting bộ nhớ, phải vào bios chỉnh như gg
+
+Tổng cộng cần test logic circuit bằng circom_tester, test logic eip2771 của solidity yêu cầu làm thủ công từng bước như tạo proof và ký message và gọi forwarder, test logic game trong solidity bằng cách chơi 1 game hoàn chỉnh với 32 turn chẳng hạn
+
+
+
+# Deploy
+Nếu deploy to hardhat local network:
+Chạy hardhat testnet
+Lấy 1 ví có sẵn tiền deploy các contract của hardhat làm deployer
+Tự deploy contract TrustedForwarder và IBattleShip chứa địa chỉ của nó là xong
+Chọn 1 tk của hardhat làm operator
+Provider lấy ngay url local
+file zkey và wasm k cần lưu trên ipfs mà lấy ngay local
+K cần Etherscan vì thấy ngay trên console của chain test
+
+Script deploy to goerli: 
+Server cần có 1 tk có tiền để deploy contract, lưu mnemonic trong file .env => hardhat config lấy cả ví đó và sẽ lấy tk 
+Đồng thời chọn 1 tk đầu tiên làm operator (relayer) cho EIP2771 
+Server cần có chain provider để tương tác với blockchain, tạo infura projectid nhét vào .env là xong => hardhat config lấy nó để tạo network config
+Lấy địa chỉ contract Forwarder của Bitconomy rồi deploy BattleshipGame theo nó
+Đăng ký Biconomy account rồi lấy BICONOMY_AUTH và BICONOMY_API lưu vào .env => file deploy.js sẽ lấy nó để thêm contract vào server để gọi hàm contract thông qua Forwarder. Mỗi mạng có API key riêng, mỗi account có 1 auth riêng
+Đăng ký tk lấy API key token của etherscan và polygonscan. Blockchain explorer không chỉ là nơi check trạng thái tx mà khi deploy, nó còn có script giúp verify tx deploy lên blockchain => hardhat config thêm nó vào object export thì trong file deploy dùng được hàm run để upload và verify contract. Ta k hiểu hàm run nó lấy ở đâu vì chả import cũng chả thấy hre, chắc là trong hre được gọi ngầm
+Deploy 3 file zkey, vkey, wasm của 2 mạch lên ipfs lấy ra hash. Dùng thư viện của ipfs code như bth. Khi deploy IPFS có 1 options dùng IPFS_ID và IPFS_SECRET làm authen sau khi đk tk sẽ có. Khi đó phải cung authen mỗi khi lấy.
+

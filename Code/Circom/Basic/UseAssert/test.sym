@@ -1,0 +1,8 @@
+1,1,1,main.c
+2,2,1,main.a
+3,3,1,main.b
+4,-1,1,main.inter
+5,-1,1,main.test
+6,-1,0,main.TestA.in
+7,-1,0,main.TestA.intermediate
+8,-1,0,main.TestA.out

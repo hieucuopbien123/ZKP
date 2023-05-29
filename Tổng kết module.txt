@@ -1,4 +1,26 @@
-ZKSync 
+ZKP
+
+
+
+# Background ZKP
+-> Example: 
+"I know the private key that corresponds to this public key" : in this case, the proof would not reveal any information about the private key.
+"I know a private key that corresponds to a public key from this list" : as before, the proof would not reveal information about the private key but in this case, the associated public key would also remain private.
+"This is the hash of a blockchain block that does not produce negative balances" : in this case, the proof would not reveal any information about the amount, origin or destination of the transactions included in the block.
+
+-> Zk-Snark chứng minh 1 câu lệnh tính toán, nhưng nó k giải quyết vấn đề trực tiếp mà phải chuyển đổi về đúng dạng mạch số học. VD mạch số học F_p là 1 mạch gồm các sợi dây chứa giá trị từ trường F_p và nối với các cổng cộng và cổng nhân modulo p lại.
+
+1 mạch số học sẽ lấy vài tín hiệu làm input (0,...,p-1). Output của mọi cổng cộng và nhân gọi là intermediate signal, trừ cổng cuối là output signal. 
+Circom dùng số p rất lớn (10^80 cơ). Đó là thứ tự của trường vô hướng của B254 curve (EIP 196).
+Còn dùng order of the scalar field of the BLS12-381 và goldilocks prime dùng trong Plonky2
+1 mạch có các constraint phải là bậc 2, linear hoặc constant. Set of constraints gọi là rank-1 constraint system (R1CS). 
+Vc ZKSnark dùng mạch số học tạo sự đơn giản trong code, các protocol ZKP khác khó ỉa
+
+-> Thiết kế mạch:
+Witness mà người dùng cung vào mạch chỉ đơn giản chứng minh rằng ta biết 1 set of input thỏa mãn mạch mà thôi
+
+***Mọi mạch dều thỏa mãn tính chất: mạch phải được thiết kế sao cho người dùng k thể tái tạo được mọi input từ R1CS + public input. Nếu tái tạo được thì mạch đó vô nghĩa
+=> Lỗi tránh hiểu lầm: Parameter của function là public và có thể bị lộ nhé, do đó buộc dùng zkp ở nhiều TH. Người dùng k thể decode ngược params do zksnark sinh ra, điều này đồng nghĩa zkp thực sự khiến cho blockchain k còn hoàn toàn public nhưng vẫn chứng minh được tính đúng đắn. Điều này hiển nhiên khi mà họ chỉ cần dùng cryptographic hash data phát là nó k còn public nx ngay nhưng nhờ zkp, nó vẫn chứng minh là hợp lệ được.
 
 
 
@@ -8,11 +30,11 @@ Thông thường, để được vote thì mọi người trong hệ thống ph�
 Một ví dụ về DAO là The DAO, một tổ chức DAO nổi tiếng đầu tiên được tạo ra trên blockchain Ethereum vào năm 2016. The DAO là một quỹ đầu tư phi tập trung, mục đích của nó là quản lý các khoản đầu tư từ người dùng Ethereum. Thành viên của The DAO được quyền bỏ phiếu về các dự án đầu tư và các quyết định liên quan đến hoạt động của tổ chức, tất cả các quyết định đều được thực hiện thông qua các hợp đồng thông minh được mã hóa trên blockchain Ethereum.
 Tuy nhiên, The DAO đã gặp phải một vụ việc an ninh mạng lớn vào năm 2016, dẫn đến mất mát khoảng 50 triệu đô la Mỹ. Vụ việc này đã dẫn đến sự phân hóa và tranh cãi trong cộng đồng blockchain về tính bảo mật của các DAO và khả năng sửa chữa các lỗi được phát hiện sau khi triển khai. Tuy nhiên, nhiều DAO khác đã được tạo ra sau đó và đang được sử dụng để quản lý các dự án và tài sản kỹ thuật số trên nhiều nền tảng blockchain khác nhau.
 
-Có nhiều phương pháp mở rộng blockchain, bao gồm ZKRollups, Plasma, Payment Channel,...
+-> Có nhiều phương pháp mở rộng blockchain, bao gồm ZKRollups, Plasma, Payment Channel,...
 Phân biệt:
 Optimism và Arbitrum One là 2 blockchain mở rộng tốc độ cao hơn sử dụng công nghệ Optimistic Rollup.
 ZK Rollup và Optimistic Rollup không liên quan gì tới nhau, đây là 2 công nghệ độc lập và có phương pháp khác nhau để mở rộng blockchain. VD dYdX, Loopring dùng ZKRollup để đạt tốc độ cao
-ZKSync là 1 hệ sinh thái sử dụng công nghệ ZkRollups.
+ZKSync là 1 hệ sinh thái sử dụng công nghệ ZkRollup. Bản thân zksync không phải 1 giải pháp mở rộng blockchain mà chỉ là 1 hệ sinh thái.
 
 Zero knowledge proof là kiểu bằng chứng mà ai cũng xác thực được nó là đúng dù không biết về nó. 
 Ví dụ: Alice muốn chứng minh cho Bob rằng cô ấy có mật khẩu để mở một tài khoản mà không muốn tiết lộ mật khẩu đó cho Bob. Alice có thể sử dụng zero-knowledge proof để làm điều này.
@@ -22,7 +44,7 @@ Thực tế 2 blockchain layer 2 này dùng giải pháp mở rộng Optimistic 
 
 Optimistic Rollup sử dụng fraud proof. Còn ZKRollup sử dụng zero knowledge proof
 
-Tổng quan:
+-> Tổng quan:
 Các giải pháp layer 2: ZK-Rollups, Optimistic Rollups, Sidechains, State Channel... nhưng qtr nhất vẫn là ZK-Rollups và Optimistic Rollups
 
 ZK-Rollup là 1 giải pháp nói rất chung. Cơ chế nó cuộn các giao dịch trên sidechain thành 1 block duy nhất và gửi lên Ethereum để xác thực. Nó tạo ra 1 bằng chứng ngắn gọn cho khối làm offchain rồi gửi lên Ethereum chỉ cần xác minh bằng chứng mà k cần thực hiện lại giao dịch
@@ -44,7 +66,7 @@ Có dự án như StarkWare, Polygon Miden
 
 Tìm hiểu về StarkWare và ZkSync
 1) StarkWare
-StarkWare không phải là 1 protocol mà là tên 1 công ty mẹ (là 1 dự án). Công ty hay dự án này cung cấp khả năng mở rộng blockchain bằng công nghệ STARK để triển khai và xác thực zero knowledge proof. StarkWare có 5 sản phẩm: 
+StarkWare không phải là 1 protocol mà là tên 1 công ty mẹ (là 1 dự án). Công ty hay dự án này cung cấp khả năng mở rộng blockchain bằng công nghệ STARK để triển khai và xác thực zero knowledge proof, 1 bước trong zkrollup. StarkWare có 5 sản phẩm: 
 Starknet là 1 network phi tập trung đầy đủ sử dụng ZkRollup STARK. Nó là 1 blockchain layer 2 riêng base lên Ethereum có nhiều sản phẩm DApp trên đó. Nó là 1 hệ sinh thái riêng
 Starkex là 1 phiên bản của Starknet được tùy chỉnh riêng để phục vụ cho Trading
 VeeDo: tạo số random
@@ -58,324 +80,123 @@ Như v ZKSync là 1 protocol, 1 sản phẩm do MatterLabs tạo ra. Ta có th�
 
 Vậy protocol này có những cái gì? 4 thành phần zksync v1, ZkEVM, ZKPorter, zksync 2.0
 Cái đầu tiên có là zksync v1. Nó là 1 blockchain layer 2 base trên Ethereum. Tức khi ta dùng zksync, ta đang dùng cái blockchain này. Nó k có coin nền tảng mà support ETH bth.
-Cơ chế tiền vẫn lưu trên smart contract onchain như bth nhưng việc tính toán và lưu trữ dữ liệu được thực hiện offchain. 1 cụm các transaction được tổng hợp lại thành 1 khối rollup và sinh ra 1 zero knowledge proof chứa bằng chứng về tính hợp lệ của mọi giao dịch trong khối Rollup. Nó chỉ là 1 dạng của ZkRollup nhưng sử dụng zk-SNARK thôi. 
+Cơ chế tiền vẫn lưu trên smart contract onchain như bth nhưng việc tính toán và lưu trữ dữ liệu được thực hiện offchain. 1 cụm các transaction được tổng hợp lại thành 1 khối rollup và sinh ra 1 zero knowledge proof chứa bằng chứng về tính hợp lệ của mọi giao dịch trong khối Rollup. Nó ứng dụng ZkRollup và ở bước sinh bằng chứng thì sử dụng zk-SNARK thôi. 
 zkSync v1 chỉ hỗ trợ vận chuyển ERC20 giá rẻ, NFT và 1 vài lệnh trade
+
+Như v ta code circom là đang code mạch để sau đó dùng zkSnark sinh bằng chứng cho mạch, là 1 phần của zkRollup protocol mở rộng layer 2, và ZKSync là 1 ví dụ ứng dụng zkrollup có đầy đủ.
 
 Về sau zkSync 2.0 ra đời đem lại cải tiến lớn đi kèm với ứng dụng của 2 thành phần quan trọng:
 zkEVM là máy chủ ảo thực thi các SM tương thích với thuật toán Zero knowledge proof. Trước đó Optimistic Rollup có thể tương thích EVM rồi nhưng ZK Rollup thì chưa. Nhờ zkEVM mà khi dùng phương pháp zksync, nó tương thích được với EVM.
 zkPorter: trạng thái layer 2 được chia làm 2 bên là zkRollup với onchain data availability và zkPorter với offchain data availability. Contract và tài khoản bên ZKRollup có thể tương tác với tk bên zkPorter và ngược lại. 
 VD layer 2 zksync 2.0 chia làm 2 nửa, Uniswap triển khai smart contract trên nửa zkRollup và người dùng với tk trên nửa zkPorter có thể swap với nó với chi phí cực kỳ rẻ. Là vì phí trên nửa rollup là do xuất bản dữ liệu lên Ethereum mà tài khoản zkPorter có thể thực hiện hàng nghìn lần swap xong chỉ 1 bản cập nhật duy nhất cần xuất bản thực sự lên Ethereum thôi. Người dùng đk tk trên zkPorter để tạo ra nguồn data offchain, có thể tương tác với smart contract ở nửa rollup với giá rẻ.
 
-zkSync 2.0 chính là zksync nhưng mạnh hơn. Bản gốc k hỗ trợ smart contract như bản 2.0 có zkEVM. Đầu tiên SM sẽ bị compiler chuyển đổi từ Solidity thành zkEVM nhằm tương thích với EVM và nguồn dữ liệu có sẵn offchain từ zkPorter
+zkSync 2.0 chính là zksync nhưng mạnh hơn. Bản gốc k hỗ trợ smart contract như bản 2.0 có zkEVM. Đầu tiên SM sẽ bị compiler chuyển đổi từ Solidity thành zkEVM nhằm tương thích với EVM và nguồn dữ liệu có sẵn offchain từ zkPorter.
 
-SnarkJS là JS lib giúp implement zkSNARK, hỗ trợ dev trong việc sinh ra zero knowledge proof
 
 
+# Phân biệt
+Circom chỉ là code sinh ra mạch logic thôi
 
-# Zero knowledge proof
-Hệ thống có 2 người Verifier và Prover. Verifier có nhiệm vụ kiểm tra xem Prover có biết về 1 thông tin nào đó không. Ta chỉ check là có biết hay không chứ ko liên quan đến chủ sở hữu. VD người dùng cung username password để vào hệ thống thì ta chỉ chứng minh là họ biết thông tin account đó và ta k qt tới việc họ có đúng là chủ sở hữu account đó không. 
+iden3 là 1 thư viện cung các công cụ có sẵn hỗ trợ xây dựng ứng dụng decentralized. Nó có nhiều công cụ hơn là chỉ ZKP.
 
-Quan niệm đa phần ta đều nghĩ Prover là người xấu luôn tìm cách đánh lừa Verifier để bypass hệ thống. Nhưng Verifier cũng có thể là người xấu ở đây. VD người dùng gửi password lên, không có gì đảm bảo là server sẽ thực sự hash password rồi mới lưu hoặc Verifier lưu thông tin người dùng lại rồi từ đó lần mò ra thông tin cá nhân khác. 
-Điều đó đặt ra 1 nhu cầu là cần có 1 giao thức kiểm tra mà phía Verifier không biết gì về kiến thức mà phía Prover đang nắm giữ => Zero knowledge proof.
+Zk Snark là 1 công nghệ xây dựng bằng chứng mà k lộ thông tin. Nó là 1 công nghệ nói chung chứ k nhất thiết cứ phải là sinh bằng chứng từ 1 mạch circom
 
-Vd: Hang của Alibaba là 1 hang hình tròn có 1 đầu vào, 1 đầu cánh cổng ở nửa bên kia hình tròn. P cần chứng minh là có chìa khóa mở cổng mà k tiết lộ cho V. P đi vào hang tùy ý chọn theo hướng A hoặc B. V đặt ra 1 nhận định là "Hãy đi ra ở cổng B", xảy ra 2 case:
-- Nếu ban đầu P vào cổng B thì chỉ cần quay đầu lại
-- Nếu ban đầu P vào công A thì mở khóa rồi đi ra cổng B
-=> P xuất hiện ở đầu B thật thì xác suất P không biết mật khẩu là 0.5
-=> Thử lần thứ 2 và P vẫn đi ra đầu B thì xs giảm còn 0.125
-=> Thử n lần khiến xs giảm cực kỳ nhỏ và P phải rất ăn may mới ra đúng cổng mà không có chìa, đến nỗi ta phải chắc chắn P biết mật khẩu thực sự
-
-Năm 1980, Schnorr Identification Protocol ra đời đã thực sự ứng dụng ZKP vào mật mã hiện đại
-
--> Interactive ZKP
-V và P phải trao đổi với nhau message để chứng minh statement của V là đúng. Như trên thì P và V phải cùng nhau tham gia, V phải thấy B đi ra ở cổng B trực tiếp mới biết statement của V là đúng và làm nhiều lần để chứng minh P có khóa. Tức V đưa ra hàng loạt challenge và chờ P hồi đáp
-
-Giao thức Schnorr Identification Protocol: P cần chứng minh cho V là mình sở hữu pivkey của 1 pubkey mà không tiết lộ pivkey
-P có khóa công khai PKa = g^a mod p và khóa bí mật SKa = a => giống với Diffie-Hellman và thuật toán chữ ký ECDSA
-P chọn random k (từ 1->q) và tính h=g^k mod p gửi cho V để bắt đầu xác thực
-V gửi lại 1 challenge là số random c
-P tính s = ac + k mod q gửi cho V
-V lúc này có: s, g^a mod p (public key), h, g, c => g^s == publickey^c x h mod p thì đúng
-=> k 2 lần giống nhau sẽ bị phá 
-
--> Non interactive ZKP
-VD P cần chứng minh 1 website rằng mình trên 18 tuổi mà không tiết lộ tuổi của mình. 2 bên cũng k cần trao đổi qua lại nhiều thông tin như interactive để xác nhận điều đó.
-Dùng Schnorr Identification Protocol cải tiến thành Fiat-Shamir Transform để tạo non-interactive.
-
-P có khóa công khai PKa = g^a mod p và khóa bí mật SKa = a
-P sinh random r và tính h = H("I am over 18 years old" || r) với H là hàm hash 
-P ký hash bằng pivkey là có signature s = Sign(h,a)
-P gửi publickey và signature tới website
-Website lấy về giải mã thành h, sinh radom challenge value c và tính R = g^c * h^-s
-Website check g^c = R*h^s => nếu h = "I am over 18 years old" thì đúng
-
-=> Hàm hash với r random ban đầu chỉ là để sinh ra signature luôn random ở mỗi lần
-=> Cơ chế là P ký message, V lấy message đó đúng thì ok. Nhưng ví dụ ở trên k chuẩn trong thực tế vì 1 message chay như v P bịa ra được, thực tế có thể cho nó là 1 con dấu của 1 tổ chức chứng minh là đủ 18 tuổi.
-
-=> Thực tế trong zksync, ta bao nó trong hộp đen và nó xử lý bao gồm cả việc của tổ chức uy tín kia.
-Input -> Mạch ZKSync -> Ouput proof
-
-Lúc offline phía prover, hắn đưa mọi thông tin vào input là bất cứ cái gì cũng được và mạch sinh ra proof
-Mạch ZKSync public cho tất cả mọi người để biết được là cái proof sinh ra đã thỏa mãn những điều kiện gì
-Bất cứ ai cũng có thể verify được prover có thực sự sở hữu các thông tin input thỏa mãn điều kiện đưa ra không
-
-ZKSync chỉ là 1 dự án mà ta k cần quan tâm, thứ ta quan tâm là dùng zero knowledge proof.
-
-Zero knowledge proof được implement bởi thuật toán mã hóa mà thực tế. Vc sinh proof luôn được thực hiện phía server offline. Người dùng có thể tạo proof offline rồi dùng smart contract trên blockchain verify proof là được, thay vì phải thực hiện lại logic thì chỉ cần verify proof. Có thể tạo 1 server verify proof mà k cần dùng blockchain, ZKP là ứng dụng mã hóa trong nhiều lĩnh vực chứ k chỉ blockchain.
-
-VD dùng đan xen ZKP ứng dụng trong blockchain: ta cung data cho người dùng offchain và người dùng sẽ phải trả phí để sử dụng data. 
-Cơ chế có thể là mã hóa data muốn bán bằng public key và đưa lên blockchain. Khi người dùng thanh toán thì đưa lại họ private key để họ giải mã và sử dụng data. Để làm protocol an toàn hơn thì có thể dùng zkp để chứng minh đoạn hash ta có là data thực sự chứ kp là 1 dãy bừa tự bịa ra mà đem đi bán
-Input: văn bản, hash
-Mạch: verify hash đúng là từ văn bản
-Output: proof
-Verifier có thể chứng minh proof đúng tức mã hash đó đúng là hash từ 1 văn bản, nhưng làm sao để chứng minh văn bản đó có nghĩa thì k thể nào, phân tích ngữ nghĩa thì mạch circom k xử lý phức tạp v được nên k làm được. 
-
-Do đó zkp ứng dụng nó k có nhiều. VD verifier 1 người trên 18 tuổi tức ta chỉ verify được rằng 1 người input vào 1 con số lớn hơn 18 chứ k nói lên điều gì về tuổi thực của họ. Nếu người đó có 1 văn bản thực sự của pháp luật nói rằng họ trên 18 tuổi mà văn bản đó k tiết lộ tuổi thực thì có thể show lên văn bản đó luôn, cần éo gì dùng zkp.
-Do đó sẽ hợp lý hơn nếu người đó chỉ có 1 văn bản pháp luật nói lên số tuổi thực của họ và nhét văn bản đó vào mạch để xử lý xác thực. Vì thực tế làm gì có tổ chức nào cung hẳn 1 văn bản chỉ để xác nhận trên 18 tuổi mà k tiết lộ tuổi thực. Ứng dụng zkp hẳn là ở đó.
-
-Nhanh: zkp chỉ giúp chứng minh 1 người có thể nhập vào input 1 giá trị thỏa mãn 1 mạch logic. Còn input đó có giá trị thực ra sao hay chỉ là bịa đặt thì phải dùng thêm nhiều biện pháp đi kèm, hoặc không thì zkp ở đây éo có vai trò mẹ gì. Tốt nhất là input phải đi kèm 1 thứ đáng tin cậy unique gắn với người đó (như chứng minh thư chẳng hạn)
-VD: Xác thực 1 người là thành viên của group mà k cần show chức quyền hiện tại là gì thì input vào thẻ thành viên, chỉ xác thực được là họ từng có 1 thẻ thành viên thỏa mãn mạch, rõ ràng họ có thể mượn được thẻ thành viên của người khác để tạo ra proof đó, phải dùng thêm biện pháp khác để xác thực
-
-
-
-# Setup
--> Cài đặt:
-Phải cài Rust vì circom compiler bản mới nhất được viết bằng Rust chứ k còn bằng JS. Muốn cài rust lại phải có visual studio installer
-Cài chi tiết trong docs bao gồm cả compile các thứ
-Có rust sẽ tự cài cargo là 1 loại package giúp install các package khác
-Build xong cục circom, nó tự thêm vào environment path cho ta nên dùng được lệnh (circom --help) từ đó
-
-Circom để compile circom
-snarkjs là npm package nhận vào artifacts sinh bởi file circom, rồi có thể dùng để generate và validate ZK Proof
-Các phase để chạy mạch là độc lập nhau
-
--> Để compile circuit: => cần mạch circom
-circom test.circom --r1cs --wasm --sym --c --inspect
---r1cs: sinh ra file test.r1cs chứa R1CS constraint system của mạch dưới dạng binary
---wasm: sinh directory test_js chứa wasm code (test.wasm) các file cần thiết để sinh ra witness
---sym: sinh file test.sym là symbol file cần để debug hoặc in ra constraint system 
---c: sinh directory test_cpp chứa nhiều file(test.cpp, test.dat, main.cpp, MakeFile,...) cần để compile C code và sinh ra witness => k dùng C++ code để tạo bằng chứng thì bỏ đi
---inspect: sẽ inspect code tìm các lỗi warning hay error báo ra. VD 1 signal mà k nằm trong constraint nào thì sẽ warning. Có thể dùng t*0 === 0 để fix
-=> Dùng c++ compile mạch to sẽ nhanh hơn
-
-Có thể dùng option -o để xđ thư mục chứa file tạo ra
-Nếu dùng include trong file thì options -l sẽ giúp xđ thêm thư mục mà chỉ thị này tìm kiếm
-
--> Để tính witness: => cần có input file
-Circom compiler sau khi chạy lệnh sẽ sinh ra 2 loại file là wasm và c++ code. Ta sẽ sinh bằng chứng lưu trong file witness.wtns. File witness thực tế được cấu thành từ tập input, intermediate signal và output.
-C1: Tạo witness bằng wasm binary và js file
-Lưu input vào file json. VD file input.json: {"a": "3", "b": "11"} => dùng string cho số vì js handle số lớn k tốt
-cd vào thư mục_js và thêm vào file json và chạy lệnh: 
-node generate_witness.js <tên file>.wasm input.json witness.wtns
-
-C2: Tạo witness bằng code C++
-cd vào thư mục _cpp và chạy "make" => sinh ra file output. Thực tế có thể phải install thêm 1 số lib nếu thiếu để chạy file C++. 
-Thêm vào file input.json và chạy lệnh: ./<file exectable> input.json witness.wtns
-
--> Tạo bằng chứng: 
-Phải dùng snarkjs để dùng Groth16 zk-SNARK protocol. Để dùng nó cần sinh ra trusted setup gồm 2 giai đoạn:
-1) Power of tau độc lập với circuit: phase độc lập sinh ptau (trusted setup)
-Lỗi k thực hiện được thì đổi thử sang cmd thay vì dùng powershell terminal
-
-Tạo 1 power of tau ceremony mới: snarkjs powersoftau new bn128 12 pot12_0000.ptau -v
-Contribute to ceremony: snarkjs powersoftau contribute pot12_0000.ptau pot12_0001.ptau --name="First contribution" -v
-=> Tất cả chỉ để có 2 file pot12_0001.ptau 
-2) Phase 2 phụ thuộc vào circuit => cần circuit sinh ra zkey
-Bắt đầu phase 2: snarkjs powersoftau prepare phase2 pot12_0001.ptau pot12_final.ptau -v => sinh ra file pot12_final.ptau
-=> Bước cho đến chỗ này nên bỏ vì chạy rất lâu, thay vì v ta chạy: 
-snarkjs r1cs info <file>.r1cs 
-để lấy thông tin của file file này xem có bnh constraint và tải loại file ptau tương ứng trên: https://github.com/iden3/snarkjs?fbclid=IwAR0hkHvMZDrCEJqr2rxMRxL4kMz6loDLU_rnTGB12XVBwnbff0GUmGVRos8
-Mạch càng lớn chạy càng lâu và file ptau càng lớn
-Trong 1 dự án dùng nhiều mạch thì chỉ cần có 1 file ptau bao lượng constraint lớn nhất là được
-Để an toàn còn có lệnh kiểm chứng file ptau là chuẩn: snarkjs powersoftau verify <file>.ptau
-
-Start zkey mới: => cần zkey sinh ra 
-snarkjs groth16 setup <tên file r1cs>.r1cs pot12_final.ptau testfile_0000.zkey => sinh ra testfile_0000.zkey
-Contribute to phase 2 ceremony: snarkjs zkey contribute testfile_0000.zkey testfile_0001.zkey --name="1st Contributor Name" -v
-=> sinh ra testfile_0001.zkey
-Export verification key: snarkjs zkey export verificationkey testfile_0001.zkey verification_key.json
-=> cuối cùng sinh ra verification_key.json
-
-Sinh proof: => cần zkey và witness
-snarkjs groth16 prove testfile_0001.zkey witness.wtns proof.json public.json 
-Đầu ra proof là 2 file: proof.json chứa proof và public.json chứa giá trị public input và output
-=> Chỗ này nếu mạch có lỗi sẽ chạy ra lỗi. Vd mạch có những 2 output là lỗi ngay
-
--> Verify bằng chứng: => cần proof
-C1: Verify bằng server js bth
-Chạy lệnh: snarkjs groth16 verify verification_key.json public.json proof.json
-=> Sẽ check proof.json hợp lệ thì trả ra ok
+Groth là 1 phương pháp xây dựng bằng chứng NIZK trong zk Snark. Nó chỉ là 1 pp nằm trong zk Snark để tạo non-interactive zero knowledge thôi. Non-interactive zero knowledge tức là verifier có thể xác thực độc lập mà k cần tương tác của người tạo ra bằng chứng. Do đó rất phù hợp với Ethereum vì nó dùng luôn contract để verify bằng chứng. Tùy proof valid hay không mà perform action tương ứng. Do đó trong Ethereum ta đang dùng NIZK chứ kp ZK bth.
 
-C2: Verify với SM
-Sinh solidity code: snarkjs zkey export solidityverifier multiplier2_0001.zkey verifier.sol
-File sol chứa 2 contract Pairing and Verifier. Chỉ cần deploy Verifier contract có hàm view là verifyProof trả true nếu proof và input là đúng. 
-Để test lệnh call thử thì chạy: snarkjs generatecall -> lấy ra output và cho làm tham số của hàm verifyProof sẽ thấy. Chỉ cần sửa 1 bit trong parameter là thành verify false ngay.
+Groth16 và plonk là 2 công cụ dùng để generate và verify ZKP trong snarkjs:
+Groth16 cũ hơn, dễ dùng hơn và sử dụng thuật toán elliptic curve cryptography. Nó phù hợp khi cần sinh nhiều proof cho cùng 1 mạch.
+PLONK dùng polynomial commitment schemes chuyển đổi đa thức thành tập evaluation point. Nó phù hợp khi cần xử lý nhiều mạch khác nhau. Groth 16 cần trusted ceremony cho từng mạch, còn PLONK và FFLONK(beta version) chỉ cần 1 ptau ceremony chung là được.
+=> Dùng cái nào cũng chỉ thay command 1 tí thôi: https://github.com/iden3/snarkjs/blob/master/README.md
 
--> Nhanh:
-circom test.circom --r1cs --wasm --sym --inspect
-input.json trong test_js: {"a": "3", "b": "11"}
-cd test_js
-node generate_witness.js test.wasm input.json witness.wtns
-cd ..
-snarkjs r1cs info test.r1cs 
-Tải ptau
-snarkjs groth16 setup test.r1cs <file>.ptau test_0000.zkey
-snarkjs zkey contribute test_0000.zkey test_0001.zkey --name="1st Contributor Name" -v
-snarkjs zkey export verificationkey test_0001.zkey verification_key.json
-copy file witness.wtns
-snarkjs groth16 prove test_0001.zkey witness.wtns proof.json public.json
-snarkjs groth16 verify verification_key.json public.json proof.json
+SnarkJS là JS lib giúp implement zkSNARK, hỗ trợ dev trong việc sinh ra zero knowledge proof bằng code JS.
 
--> Nhanh hơn
-circom test.circom --r1cs --wasm --sym
+ZKRollup nói chung là 1 phương pháp mở rộng layer 2. Cụ thể là nó là công nghệ gom các giao dịch lại với nhau trước khi ghi vào blockchain chính để nén số lượng giao dịch cần ghi vào blockchain. 
+ZKRollup sử dụng ZKSnark để làm bước sinh bằng chứng cho nó.
 
-input.json trong test_js: {"a": "3", "b": "11"} => public input phải để lên đầu
+=> Tức ta cần dùng circom sinh mạch cho contract solidity, rồi dùng ZKSnark sinh bằng chứng, rồi dùng ZKRollup để cuộn com các giao dịch lại và gửi lên blockchain. 
 
-cd test_js
-node generate_witness.js test.wasm input.json witness.wtns
-cd ..
-snarkjs groth16 setup test.r1cs powersOfTau28_hez_final_08.ptau test_0000.zkey
-snarkjs zkey contribute test_0000.zkey test_0001.zkey --name="1st Contributor Name" -v
+-> Sau cùng mới dùng ZKEVM.
+1 EVM bình thường mà 1 node trong mạng Ethereum sử dụng để thực thi smart contract, xử lý giao dịch để cập nhật trạng thái lên chain của node đó, k hỗ trợ ZKP. Nếu muốn dùng ZKP, ta phải code circom rồi dùng ZKSnark sinh proof và hàm verify nhét vào Smart contract để EVM compile
 
-123
-snarkjs zkey export verificationkey test_0001.zkey verification_key.json
+ZKEVM giống EVM nhưng hõ trợ ZKP, vẫn compile solidity sm. ZKEVM hỗ trợ sẵn ZKP và cho phép dev viết SM bằng solidity và deploy lên blockchain dựa trên ZKP.
 
-copy file witness.wtns
 
-snarkjs groth16 prove test_0001.zkey witness.wtns proof.json public.json
-snarkjs groth16 verify verification_key.json public.json proof.json
 
-=> iden3 github có sẵn hàng loạt mạch và cung nhiều thư viện chức năng giúp tạo mạch circom dễ dàng
+# ZKSnark
+Loại NIZK dùng phổ biến nhất là zk-SNARK proofs. Nó có 2 điểm lợi là tạo proof kích thước nhỏ và thời gian verify nhanh dù mạch có lớn đến mấy.
 
+ZKSnark chứa 3 hàm: 
+Generator G(secret lamba, program C) = (proving key pk, verification key vk) => Nó là đặc trưng của mạch C và chỉ cần generate 1 lần
+Prover P(pk, public input x, private witness w) = proof prf chứng minh private witness w là thỏa mãn 
+Verifier V(vk, public input x, proof prf) = true/false
 
+Vấn đề: dù k hiểu nhưng secret lamba dùng trong G nếu để lộ, người khác sẽ tạo ra được fakeproof để V(vk, public input x, fakeproof) luôn bằng true. Do đó tham số này được sinh random và che giấu, họ cũng làm cho qtr sinh key trở nên rất phức tạp và loại bỏ tham số lamba lộ ra ngoài trong qtr sinh key từ mạch.
 
-# Signal
-Input signal của 1 mạch luôn lấy từ nơi gọi nó nên luôn là có giá trị rồi và k được gán nx
-
-Signal là thành phần chính trong mạch lưu biến tuân theo các constraint, các var thì không. Signal luôn nằm đúng chiều mũi tên để gán giá trị cho đúng 1 signal đó, phía ngược lại là biến or expression, signal khác thoải mái.
-
-Trong compile time thì signal luôn là unknown kể cả khi đã gán giá trị constant cho nó. Do đó sẽ lỗi nếu output signal gán giá trị mà phụ thuộc vào 1 logic không rõ ràng. 
-VD:
- signal input in;
- signal output outA; 
- var i = 0; var out = 0;
-   while (i < in){
-     out++; i++;
-   }
- outA <== out;
-=> lỗi vì signal in lúc compile là unknown nên vòng while k rõ ràng mà đầu ra outA lại phụ thuộc vào logic đó
-
-Signal và component phải khai báo ở top level block. Ở phiên bản mới có thể khai báo signal ở trong condition với đk condition phải known từ compiletime
-1 component chỉ có thể truy cập mọi signal của component nested bên trong. K truy cập được vào signal nested của nested components
-
--> Varible là non signal data và mutable
-
-Phép gán bằng k trả về giá trị, đừng gộp như này là sai: a = (b = 3) + 2; or if(a=3){...}
-
-Các thao tác khác về toán và logic k đổi
-
-số p là 1 só nguyên tố cực kỳ lớn. Mọi số trong circom đều là mod của số đó, gọi là tập pZ
-
-Phép ** và **=
-Chỉ có a++, k có chiều ngược lại
-~= complement, ^= phép xor, >>= phép dịch phải
-
-x << k = x/(2^k) và k phải <= p/2
-
--> Operator ?_:_ chỉ được dùng ở top level
-
--> Lỗi scalar:
-Code k được có quá nhiều output or k có output nào 
-
-Trong mạch circom k được chỉ có phép cộng trừ, buộc phải có ít nhất 1 phép nhân. Vì khi compile, groth cho input đi qua các cổng ra output. Mạch ta tạo ra được tách riêng thành các cổng khác nhau cho từng constraints. Nó bỏ qua các cổng cộng và chỉ lấy các cổng nhân. Do đó k có cổng nhân nào thì coi như mạch k có gì vì k có cổng liên kết các cổng cộng lại với nhau
-
-VD ứng dụng circom thực sự có ích: tạo 1 circom nhận private input là private key, public input là address, mạch dùng private key tạo ra address để chứng minh sở hữu private key của 1 address
-circom giúp che dấu private input là điểm lợi 1 
-điểm lợi 2 là tách cục code trong solidity dùng trong hàm verify của circom thì hàm nhỏ sẽ lỗ gas, hàm lớn sẽ lợi gas hơn. Nên nhớ do transaction gọi 1 hàm getter sẽ payfee thêm của mọi logic trong hàm getter đó
-
-1/0 thì lỗi, 1/in và in = 0 thì không báo lỗi. Signal mặc định là 0
-Khi mạch lỗi sẽ bỏ qua nếu dùng <-- nên 1/0 ra 0 => chứ kp overflow k hợp lý. Phép toán trên circom là trên trường số hữu hạn
-
--> Phép toán trên trường số hữu hạn:
-1/2 = 10944121435919637611123202872628637544274182200208017171849102093287904247809 = x
-với max trường hữu hạn nguyên là p = 21888242871839275222246405745257275088548364400416034343698204186575808495617
-=> trong circom không tồn tại float point. Nên phép chia thực chất là phép nhân nghịch đảo của số đó modulo p
-Thực vậy: 2*x = 21888242871839275222246405745257275088548364400416034343698204186575808495617 + 1 = 1 (modulo p)
-Tính: 1/2 (mod p) = x => 2*x = 1 (mod p) quy về phép nhân => mà 2 < 1 nên 2*x = 1 + p => x = (p + 1)/2
-
--> tuple và array
-
-
-
-# Template
-Như 1 circuit object mới, nếu k được gọi từ hàm main thì input của nó được truyền từ 1 circuit khác
-
-Params của 1 template phải rõ từ compile time, VD truyền input signal làm params là sai vì compile time nó là unknown
-
--> Custom template là 1 cái vớ vẩn k có component hay constraint bên trong
-Dùng phải thêm pragma custom_templates; => có rất nhiều pragma cung nhiều tính năng khác nhau
-Snarkjs thay vì sinh r1cs constraint như với template bth, nó sẽ xử lý custom template ở giai đoạn sau, sử dụng PLONK scheme khi generate và validate zkproof sẽ export thông tin về custom template vào file r1cs
-
--> Function để xử lý logic, k được có signal mà chỉ thao tác với biến
-
-
-
-# Component
-Component chỉ hoàn tất việc khởi tạo và bắt đầu chạy khi mọi input của nó đều được gán đủ giá trị. VD signal input của 1 template là mảng 2 phần tử thì mạch sẽ chỉ chạy khi cả 2 phần tử đều được gán giá trị. Chỉ khi đó mới truy cập được output signal của mạch đó. Mạch nào gán đủ giá trị trước sẽ được khởi tạo trước chứ k qt thứ tự trong code
-
-Từ khóa parallel có thể thêm vào template or từng lúc khởi tạo component. Chỉ dùng khi các components hay template lớn, khi đó sẽ được xử lý độc lập. Nó chỉ có hiệu lực khi dùng C++ để generate witness
-
-1 file circom có thể k có component main và chỉ được có 1 main comp. Kể cả các file include cũng coi là phần code đó và k được có main nếu file này đã có
-
--> Anonymous component
-
-
-
-# include
-circomlib của iden3 cung sẵn các file circom
-include file đó vào có thể dùng các template và function bên trong.
-
-
-
-# Constraint
-1 phép là constraint sẽ check lỗi. Nếu lỗi sẽ dừng mạch ngay.
-1 phép không là constraint sẽ k check lỗi và mạch vẫn chạy bất chấp phép đó có thể gây lỗi.
-
-Có 2 phép constraint thông dụng là: === và <==
-Phép đầu tiên sẽ dừng mạch nếu 2 vế k bằng nhau
-Phép thứ 2 sẽ dừng mạch nếu expression bên trái k hợp lệ. VD x <== a/b mà a không chia hết cho b sẽ k thỏa mãn constraint này và bị dừng mạch
-Var thì có thể so sánh, tính toán thoải mái với các phép toán bth
-Signal thì bị hạn chế, ta hiểu code circom thì các signal ban đầu là unknown và mọi phần code gán signal output đều phải được rõ ràng từ thời điểm compile.
-Do đó:
-- Signal k thể so sánh < or > với 1 signal khác vì chúng là unknown. Signal k thể ss với 1 số vì output đầu ra k được phụ thuộc vào 1 logic k rõ ràng, nó unknown nên lúc compile k rõ phép if else đó chạy như nào. Điều đb là nếu phép ss 1 số với 1 signal mà k ảnh hưởng gì tới output(bất kể if else chạy vào đâu) thì nó vẫn k báo lỗi.
-- Signal chỉ có thể dùng phép số học cơ bản như cộng trừ nhân chia dịch bit với 1 signal or 1 số khác. Signal có thể gán bằng or ss bằng với constraint
-- Có thể gán var cho signal nhưng k gán signal cho var => signal immutable và rất chặt chẽ, gán cho var đc thì ss đc mất r
-signal mặc định là private chỉ trừ ouput mạch hàm main và các tham số specific là public trong hàm main
-Mọi constraint trong circom đều là quadratic của dạng (A*B + C = 0), nó luôn biến đổi được về dạng đó.
-Nếu không sẽ lỗi. VD:
-template multi3() {
-     signal input in;
-     signal input in2;
-     signal input in3;
-     signal output out;
-     out <== in*in2*in3;
+-> VD1 klq tới blockchain: Alice chứng minh rằng sở hữu w mà Hash(w) = x cho Bob.
+function C(x, w) {
+  return ( sha256(w) == x );
 }
-=> lỗi vì in*in2*in3 không là quadratic mà là bậc 3 mất r
-Phép gán out <== 1 - a*b; tương đương với:
-out === 1 - a*b;
-out <-- 1 - a*b;
-Khi constrains được đặt trong block conditional hay loop thì phần điều kiện k được phép unknown mà phải xđ giá trị rõ. NN là vì vc sinh constraints phải là unique và không phụ thuộc vào unknown input signal.
-Constraint phụ thuộc vào biến, biến nằm trong loop hay condition thì phần dk vẫn k được unknown
+Bob sinh key: (pk, vk) = G(C, lambda) và che dấu lamba vì nếu lộ, Alice sẽ tạo ra fakeproof mà Bob verify luôn ra true
+Alice sinh proof: prf = P(pk, x, w)
+Bob xác thực bằng V(vk, H, prf) = true là được
+
+Nếu ngược lại, Bob cũng sở hữu w2 mà Hash(w2) = x2 thì k thể tái sử dụng (pk, vk) mạch trên được vì Alice k tin Bob đã giấu lamba ở đâu đó. Khi đó Alice lại phải sinh 1 mạch nx. 
+Để tái sử dụng sẽ phải tin 1 bên thứ 3 cung (pk, vk), xác thực giữa 2 người mà lại cần bên thứ 3 vào rất k tốt.
+
+-> Trong Ethereum:
+Vc sinh 2 key được làm offchain và lamba được che giấu hoàn toàn khi dùng thư viện đến cả người sinh key cũng chả biết. Gọi là zkey và verification_key
+Prover tạo bằng chứng offchain
+SM onchain chính là verifier có hàm xác thực và perform các action tương ứng.
+
+VD: Confidential Transactions là transaction mà k lộ khoản tiền giao dịch.
+Tạo 1 token ERC20 lưu balance nhưng k ai check được balance, bằng cách dùng: 
+mapping (address => bytes32) balanceHashes; thay vì mapping (address => uint256) balances;
+
+A chuyển tiền cho B: contract phải check A đủ balance rồi update balance của 2 người nhưng k thể thấy balance mà chỉ thấy hash. Do đó cần check balance bằng ZKSnark.
+URL: https://consensys.net/blog/developers/introduction-to-zk-snarks/
+
+VD: mạch phía sender
+function senderFunction(x, w) {
+  return (
+    w.senderBalanceBefore > w.value &&
+    sha256(w.value) == x.hashValue &&
+    sha256(w.senderBalanceBefore) == x.hashSenderBalanceBefore &&
+    sha256(w.senderBalanceBefore - w.value) == x.hashSenderBalanceAfter
+  )
+}
+=> Đáng lẽ chỉ cần check balance đủ và lượng ban đầu đúng bằng lượng ban đầu trong SM là đủ r. Nhưng ta check thêm hashSenderBalanceAfter để biết sau khi giao dịch thực hiện xong, hash của balance đúng bằng public input x.hashSenderBalanceAfter là đã update balance thành công.
+Cụ thể nó nhận public input và private input xong check giá trị giữa 2 cái. Ta hiểu lầm rằng input của mạch chỉ là số bth với logic thuần mà k lấy được từ data smart contract là sai. Hàm verifier được gọi từ smart contract và tham số public input có thể truyền vào từ các biến trong SM ok.
+
+Tương tự receiver:
+function receiverFunction(x, w) {
+  return (
+    sha256(w.value) == x.hashValue &&
+    sha256(w.receiverBalanceBefore) == x.hashReceiverBalanceBefore &&
+    sha256(w.receiverBalanceBefore + w.value) == x.hashReceiverBalanceAfter
+  )
+}
+Vì người gửi cũng kb người nhận hiện đang có bnh tiền nên cần người nhận tham gia như này để update balance của họ.
+
+Demo chưa phải là confidential transaction:
+User cần phải keep track balance ở client side, nếu họ lỡ làm mất số balance thì phải có cơ chế lấy lại bằng cách encrypted nó với key lưu trên contract
+Sender và recever phải tương tác với nhau ở TH này đê gửi và nhận. Đúng hơn là nên cho 1 bên gửi, 1 bên finalize để nhận.
+
+function transfer(address _to, bytes32 hashValue, bytes32 hashSenderBalanceAfter, bytes32 hashReceiverBalanceAfter, bytes zkProofSender, bytes zkProofReceiver) {
+  bytes32 hashSenderBalanceBefore = balanceHashes[msg.sender];
+  bytes32 hashReceiverBalanceBefore = balanceHashes[_to];
+  
+  // Truyền vào public input giá trị từ SM
+  bool senderProofIsCorrect = zksnarkverify(confTxSenderVk, [hashSenderBalanceBefore, hashSenderBalanceAfter, hashValue], zkProofSender);
+  bool receiverProofIsCorrect = zksnarkverify(confTxReceiverVk, [hashReceiverBalanceBefore, hashReceiverBalanceAfter, hashValue], zkProofReceiver);
+
+  if(senderProofIsCorrect && receiverProofIsCorrect) {
+    balanceHashes[msg.sender] = hashSenderBalanceAfter;
+    balanceHashes[_to] = hashReceiverBalanceAfter;
+  }
+}
 
 
 
-# Tag
-main copmonent input k được có tag
-tag sẽ tự kế thừa dù gán 1 input có tag cho 1 input k có tag
-tag do ta tự implement và compiler k check validity của nó
-Chỉ signal có tag mới truyền giá trị được vào 1 signal input có cùng tag đó. Các signal intermediate hay output gán thoải mái
+# Project BattleZip
 
-Tag with value:
-value của tag phải xđ rõ tại thời điểm compile time. Có thể gán và lấy giá trị.
-signal chỉ có thể gán tag value trước khi nó có được gán giá trị thực tế
-Mọi phần tử của signal array đều có chung tag value và lấy được thông qua tên array luôn
+# Project Tornadol Cash

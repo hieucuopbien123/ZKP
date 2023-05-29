@@ -1,0 +1,216 @@
+Tornadol Cash: xây dựng 1 ứng dụng virtual currency mixer dùng để rửa tiền. Full implement cả front và back, cả deploy to mạng goerli hoàn chỉnh.
+
+Bản quyền: Các file có license ở đầu file thì ta có thể sử dụng tự do nhưng phải giữ nguyên license. Các file k có license ở đầu thì mặc định là copyrighted k thể sử dụng cho mục dích thương mại
+
+
+
+-> Finite fields:
+Máy tính có memory hữu hạn nên các số vô hạn khi lưu thực chất bị làm tròn khi lưu. Điều này có thể vẫn đúng trong tính toán bth, nhưng cryptography thì không vì yêu câu 1 sự chính xác tuyệt đối. Do đó trường số hữu hạn ra đời: 
+Chỉ chơi số không âm, k có float, bị giới hạn ở 1 số dương lớn, nếu vượt quá sẽ quay vòng(mod), vẫn có các phép tính cơ bản.
+
+Số 0 trong trường này được gọi là additive identity tức mọi số + 0 = chính nó
+Mà trong trường hữu hạn từ 1 -> n => mọi số + n = chính nó => nên họ quyết định trường hữu hạn chạy từ 0 đến n - 1, chứ kp từ 1 -> n
+
+Số âm được gọi là additive inverse trong trường hữu hạn. Bởi họ coi x + (-x) = 0 thì trong trường hữu hạn từ 0 tới n - 1, số âm của 8 chẳng hạn sẽ bằng (n - 8) vì 8 + (n - 8) = n (overflow) = 0
+Đó cũng là cơ sở thực hiện phép trừ, nhưng để tránh phức tạp, ta cứ tính như toán học bth nhưng thêm mod vào, chỉ sai ở 1 số TH đb thôi
+
+Ở trong trường số thực, ở 1 số bất kỳ x, ta luôn tìm được y để x * y bằng bất cư 1 số nào khác ta mong muốn. 
+Nhưng trong trường số hữu hạn, VD n = 12:
+Ta chọn x = 3 sẽ không thể tìm được y để x * y = 2 4 được. Nó bị cyclic 0 3 6 9 0 3 6 9 khi nhân 3 với lần lượt từ 0 -> 11
+Ta chọn x = 5 thì lại luôn tìm được y để x * y bằng bất cứ số nào trong khoảng 0 -> 11
+=> NN là vì 12 chia hết cho 3 nhưng k chia hết cho 5. 
+=> Ta mong muốn trường hữu hạn giữ nguyên các tính chất của trường số thực nên phải chọn n là prime number để k chia hết cho bất cứ số nào từ 1 đến n - 1 => Gọi là Prime Field
+
+Số 1 cũng được gọi là multiplicative identity trong trường hữu hạn luôn 
+
+Multiplicative inverse là số nhân với x bằng 1. Ví dụ trong trường hữu hạn n = 7 thì 3*5 = 1 nên 3^(-1) = 5 ở đây
+=> Có thể tìm bằng Euler theorem học trong môn cryptography
+
+Phép chia tương tự phép nhân inverse modulo. Phép chia 0 vẫn lỗi undefined như bth trong trường hữu hạn.
+
+Exponentiation tương tự multiplication nhiều lần
+Field Generator (primitive element) là số mà mũ dần lên từ 1 tới n - 1 sẽ cho ra mọi số ở trong trường đó. 
+Tính chất là: generator^(n - 1) = 1
+VD số 3 trong Prime Field n = 7
+
+Tương tự logarit ngược của Exponentiation
+
+=> Prime Field giữ mọi tính chất của trường số thực bth và được dùng nhiều trong mã hóa.
+
+-> Vấn đề về Loga trong Prime Field
+Trong trường thực, hàm tuyến tính là 1 đường thẳng
+Trong Prime Field k continuous, đồ thị hàm tuyến tính rải rác nhưng vẫn có tính cyclic bị lặp lại và dễ đoán
+
+Trong trường thực đồ thị hàm loga là 1 đường cong, nhưng điều quan trọng là nó đơn điệu, luôn tăng or luôn giảm. 
+=> Nếu tìm giá trị hàm loga, thuật toán khá đơn giản là tìm kiếm nhị phân, chặn trên dưới r cứ chia đôi r chặn tiếp cho đến khi tính mũ lên - giá trị thực có độ sai < mốc error mà ta chấp nhận
+
+Tuy nhiên trong Prime Field, đồ thị hàm loga nó bị rải rác random. Cho nên k có bất cứ 1 effective method nào để tìm giá trị hàm loga trong Prime Field mà cách duy nhất là thử sai. 
+
+a^x=b => biết a và x tính b dễ, nhưng biết a và b tính x rất khó
+=> Vô tình biến prime field hàm exponentiation thành hàm 1 chiều. Nếu chọn số max n đủ lớn thì việc tìm kiếm ngược lại x từ a và b là điều k thể, tìm kiếm a từ x và b cũng không thể
+=> KL: Nếu ta thực hiện multiplication 1 element ở Prime Field lên x lần thì thông tin x sẽ bị ẩn đi 
+
+Môn mã hóa ta học thì thông tin a bị ẩn đi, còn x là public key, b là thông tin sau khi mã hóa. Để giải mã họ tạo 1 cặp pivkey d với pubkey x có quan hệ 1 chút là việc tính loga trở nên dễ hơn và giải được: x * d = 1 mod n
+Còn ở trên nó hide x hay a tùy chọn.
+
+
+
+-> ZKP:
+Verifier đưa ra challenge lien quan đến thuộc tính của đối tượng, prover phải nắm giữ secret infomation mới giải được challenge. Nhưng vẫn có 1 xs nhỏ prover giải được mà k cần phải nắm giữ secret info. Do đó, ZKP thực ra vẫn có 1 xs nhỏ bị giả mạo bằng chứng để đưa ra lời giải chính xác, chỉ là nó quá nhỏ nên trở thành đáng tin thôi chứ kbh đạt 100% độ chính xác.
+
+--> Bài toán: Prover chứng minh mình sở hữu x thỏa mãn x^2 + 4x + 7 = 0 trong trường hữu hạn mod 977. Chú ý trường hữu hạn số tự nhiên khiến cho chương trình này có nghiệm (trường số thực sẽ vô nghiệm) và rất khó tìm nên bài toán này là thực tiễn. 
+Ta có 300 là generator của trường prime max 977. Đặt V(I) = 300^I => Khi đó 300^(p-1) = 1 và p là 977 = 0 mà ta đặt từ 0 tới 976
+Khi đó bài toán trên mà x thỏa mãn thì: (x^2 + 4x + 7) - 1 = p - 1 = I => V(I) = 300^(x^2+4x+6) = 1
+=> 300^(x^2) * 300^(4x) * 300^6 = 1
+
+Nhưng nhớ rằng 300^(4x)(mod 977) = 300*300*...*300 => nhân lên 4x lần => mà trong trường hữu hạn, khi ta nhân 1 số lên nhiều lần, ta sẽ hide được thông tin về số lần nhân. Do đó thông tin về 4x đã bị ẩn đi, tương tự x^2 cũng bị ẩn đi.
+
+=> Do đó prover cung ra A = 300^(x^2) và B = 300^(4x) thì thông tin về x vẫn bị ẩn đi, nhưng nếu nó thỏa mãn A*B*300^6 (mod 977) = 1 thì verifier có thể kết luận prover thực sự sở hữu x (1 xs rất cao). Vì nếu k sở hữu x mà đưa ra đúng số A = 300^(x^2) và B = 300^(4x) để A*B*300^6 (mod 977) = 1 là rất khó, xs cực thấp
+=> Trong thực tế số p cực lớn vì p nhỏ người ta có thể bruteforce ra x được ở case này
+Ở đây x = 607 => A = 961, B = 81, 300^6(mod 977) = 226
+
+Mạch setup: V(I) = 300^I => làm cơ sở để tạo ra bài toán dựa vào tc của generator. Trong circom đương nhiên có generator cố định và nó cũng tạo bài toán với cơ chế tương tự. Vc lộ generator không giúp ích cho việc giải toán, VD ở trên biết số 300 để làm gì đâu khi k có x
+Mạch có input là A và B
+Mạch có constraints: A*B*300^6 = 1
+
+
+
+-> Verification setup
+Circom biểu diễn dạng mạch logic. Mạch cộng có thể nhận nhiều input 1 lúc, mạch nhân chỉ nhận 2 input. Do đó phải kết hợp nhiều mạch nhân cho số mũ lớn. 
+
+Các output của mạch logic mà kp output cuối gọi là intermediate signal. Các intermediate signal đều tham gia vào qtr tạo witness. Điều này để đảm bảo mạch đã được execute thực sự để sinh ra witness đó.
+VD: ta giải bài tập mà chỉ cho mỗi output thì sẽ bị coi là chép bài, nhưng nếu ta viết chi tiết từng bước ra thì mới chứng minh được quá trình ta giải là thực.
+Thực tế thì mọi intermediate signal, ta gọi là witness luôn cũng được. Còn file witness thực sự nó chứa tất cả các signal luôn.
+
+Mọi phép toán đều được biến đổi về mạch logic từ trong code cho tới khi compile. 1 system như v gọi là Rank 1 Constraints System.
+=> ref tới "LearnBasicCircomFirst" hướng dẫn basic các câu lệnh mạch circom
+
+
+
+-> ZKSnark
+Snark và ZKSSnark khác nhau
+Snark là 1 từ mô tả ZKP hiệu quả như thế nào: 
+Succinct: proof k được quá dài vì Ethereum sẽ mất nh gas để verify nó
+Non-interactive arguments of knowledge: quá trình sinh bằng chứng k cần sự tương tác của verifier. Verifier coi như chỉ được đưa ra 1 challenge là cái mạch và xs để prover giải mạch mà k biết secret info là cực kỳ nhỏ
+
+
+
+-> MiMC hashing function
+Thuật toán mã hóa 1 chiều được thiết kế riêng cho ZKP, dùng trong Prime Field. Độ phức tạp phép nhân thấp nên rất phù hợp cho ZK-SNARK app. 
+
+Công thức: 
+E(x) = (Fr-1 + Fr-2 + .. + F0)(x) + k
+với Fi(x) = (x + k + ci)^3
+=> k là hằng số ta chọn, c là 1 mảng các hằng số là số nguyên lớn mà ta chọn random, c[0] = 0. Cứ chọn r hardcode vào code là được
+
+Cơ chế: ta có 1 số x làm input, ta cho đi qua các hàm F là từng round, output là giá trị hash. Số lượng round là bất kỳ, càng lớn càng an toàn.
+Trong tornadol cash, số lượng round là 90.
+
+Thực tế trong trường prime, để tạo hash function rất dễ vì cộng r nhân lên tí là mất dấu ngay
+
+--> Implement MiMC hashing function:
+Trong ethers v6, class BigNumber đã k còn mà dùng native BigInt của JS. Do đó ta cài v5 để dùng ethers.BigNumber
+
+Trong solidity implement nó cũng ok, để chạy cùng 1 hàm hash trong contract
+
+
+
+-> Groth 16
+Witness chứa mọi thứ và lộ thông tin bí mật, ta cần phải transform (encode) nó thành 1 dạng khác trước khi truyền vào hàm verify để chứng minh witness là đúng. Groth 16 giúp làm điều đó
+
+--> Lý thuyết:
+Input (dạng plain text) là witness cần che giấu -> R1CS (first step of transformation) sẽ flatten circuit, các witness value được sắp xếp gọn gàng trong system equations. Cụ thể nó chỉ chứa phép cộng và mỗi equation chỉ chứa 1 phép nhân -> Polynomials (hay QAP - Quadratic arithmetic program) tức biểu diễn tất cả dưới dạng hàm đa thức f(x) đơn giản => Tức cuối cùng từ plain text, ta có đa thức là giá trị đã được encode
+=> Thay vì chứng minh người dùng sở hữu input dạng plain text sẽ lộ, ta chứng minh họ cung ra đa thức kia là đúng
+
+Nhưng làm sao để chứng minh đa thức là đúng. Thì từ mạch, ta xây ra 1 cái expected polynomial g(x) và chứng minh f(x) bằng g(x) thì đa thức kia thỏa mãn (tượng trưng thôi). Tuy nhiên cách đế so sánh f(x) và g(x) 1 cách an toàn mà k làm lộ chúng là:
+Biến đổi từng giá trị của f(x) thành 1 điểm trong elliptic curve bn128. Biến đổi từng giá trị tương ứng của g(x) thành 1 điểm trong bn128 luôn. So sánh các điểm trùng nhau thì đúng là f(x) = g(x)
+=> Bằng việc ánh xạ, dù point có bị lộ cx k lộ f(x). Điều này tương ứng với việc ánh xạ 1-1 I thành 300^I ở vấn đề trước.
+
+Để implement nó, ta 1 list các random value cho 2 hàm và nếu 2 hàm trả ra cùng 1 set giá trị thì f(x) = g(x) => Vấn đề là set of random value đó phải đáng tin. Nếu ai đó biết toàn bộ tập random, họ có thể xây dựng 1 hàm f(x) fake trả ra đúng giá trị với các random value đó và pass qua được challenge 
+=> Do đó Groth16 cần có 1 trusted setup. Giai đoạn sinh ra 1 list các số random đáng tin cần nhiều party tham gia và cung 1 list số random. Chỉ cần 1 party or 1 random number thực sự an toàn, kbh bị lộ thì quá trình này thành công vì chỉ cần 1 số random k lộ, sẽ kbh brute force được nó vì quá lớn.
+
+Tức Groth16 dùng trusted setup để có list số random đáng tin, kết hợp với circuit sinh ra g(x), từ input plaintext sinh ra f(x) => kết hợp f(x) và g(x) sinh ra proof k thể truy ngược lại f(x) và g(x) => cuối cùng truyền proof vào hàm verify. Hàm verify sẽ check f(x) và g(x) trong list số random, sinh cùng giá trị thì ok
+=> Implement hơi khác tí (thực chất bên trong nó giống nhau): trusted setup để có randomenss -> kết hợp circuit để có g(x) -> kết hợp input sinh ra luôn proof
+
+---> Groth 16 setup procedure
+Tạo 1 trusted setup (ceremony) gọi là poweroftau với bn128 => ra 1 file poweroftau
+-> Đưa file này cho nhiều tổ chức khác nhau và yêu cầu họ cung randomness attribute vào file đó và xóa số random đó đi. Chỉ cần 1 số random kbh bị lộ hay bị xóa đi thực sự là poweroftau an toàn
+-> ra 1 file poweroftau đã cung hàng loạt số random thì prepare for phase2. Vì ta sinh poweroftau độc lập, ta phải kết hợp với circuit vào mới sinh ra được expected polynomial chứ => ra final ceremony file
+-> Dùng final ceremony file + circuit.r1cs = zkey file (proving key) cần thiêt bất cứ khi nào sinh ra proof để làm tham số truyền vào hàm verify
+-> Và để an toàn, có thể tiếp tục cung randomness vào zkey file với process giống như trước -> final zkey file
+-> final zkey file + circuit assembly + input.json => proof
+
+--> Dùng command:
+snarkjs poweroftau new bn128 12 ceremory_0000.ptau -v
+=> 12 là max 2^12 constraints trong mạch. Đặt tên output ceremony_0000 tượng trưng cho party đầu tiên tạo ra ceremony file. 
+
+snarkjs poweroftau contribute ceremony_0000.ptau ceremony_0001.ptau -v
+=> Ta nên gửi cho nhiều third party khác để cung random ở đây và người dùng như ta k nên có bất cứ knowledge nào về số random cả. Đặt tên output ceremony_0001 để biết party số 0 đã thêm random cho file ptau. Cần phải nhiều party contribute nhiều lần
+
+snarkjs poweroftau verify ceremony_0001.ptau
+=> verify xem file ptau được setup chuẩn k
+
+snarkjs poweroftau prepare phase2 ceremony_0001.ptau ceremony_final.ptau -v
+=> setup for phase2, sinh file ceremony cuối cùng
+
+snarkjs poweroftau verify ceremony_final.ptau
+=> verify file final ceremony
+
+circom circuit.circom --r1cs
+=> compile ra r1cs là flatten cái circuit thôi, k cần file assembly
+
+snarkjs groth16 setup circuit.r1cs ceremony_final.ptau setup_0000.zkey
+=> Dùng Groth 16 để: circuit.r1cs + ceremony_final.ptau => file zkey
+
+snarkjs zkey contribute setup_0000.zkey setup_final.zkey 
+=> Lại contribute randomness cho zkey file. Ở đây ta contribute 1 lần rồi sinh luôn file final cho đỡ lằng nhằng
+
+snarkjs zkey verify circuit.r1cs ceremony_final.ptau setup_final.zkey
+=> verify zkey setup chuẩn
+
+circom circuit.circom --wasm 
+snarkjs groth16 fullprove input.json circuit_js/circuit.wasm setup_final.zkey proof.json public.json
+=> Sinh proof = input + circuit assemby + zkey
+=> public.json lưu public signal. Còn proof.json chứa các tham số truyền vào hàm verifier (là input private dạng plaintext đã được encode 1 chiều)
+
+snarkjs zkey export solidityverifier setup_final.zkey Verifier.sol
+=> Sinh contract
+
+snarkjs zkey export soliditycalldata public.json proof.json
+=> Vẫn là sinh ra proof như trên nhưng là các tham số có thể truyền thẳng vào hàm verifier trong remix theo đúng thứ tự luôn cho nhanh, k cần đọc hiểu.
+
+
+
+-> Tornadol Cash Basic
+--> VD: ta gửi 100 ETH cho 1 address của B. Ai cũng thấy điều đó và họ biết lượng tiền đã đi đâu. Nếu họ biết address kia thuộc về Bob, họ sẽ biết Bob đang có 100ETH.
+Với tornadol cash, ta deposit 100 ETH vào, address của Bob nhận được 100ETH. Ai cũng thấy 2 tx đó, nhưng họ k thể truy ngược được 100ETH mà Bob nhận là do ta gửi. Điều này có ích vì ta chỉ cần bảo Bob tạo 1 account mới offline k ai biết xong gửi tiền cho address đó là xong.
+Tội phạm có thể dùng rửa tiền bằng cách gửi cho 1 tk khác vẫn là của hắn thì k thể truy ngược được nguồn tiền từ đâu.
+
+Cách dùng: https://tornadocash.eth.link/
+Ấn deposit 1 lượng -> file chứa mã bí mật được lưu ở local -> confirm tx là deposit thành công
+Đợi vài ngày, vì nếu withdraw ngay mà k có tx nào khác trên tornadol cash, có khả năng sẽ bị phát hiện là người vừa deposit 10ETH, xong withdraw 10ETH đó là cùng 1 người
+Nhập lại key bí mật từ file vào và nhập vào 1 địa chỉ khác để nhận -> ấn withdraw sẽ bắt đầu sinh zk proof. Ấn confirm sẽ truyền proof đó vào ok. Khoản tiền nhận lại bị trừ vài phần trăm trả cho dev.
+
+Check sẽ thấy sender deposit ETH, receiver nhận về ETH từ 1 địa chỉ lạ và k có cách nào tìm ra được người sender ban đầu. Dù có decrypt cái tx ra giá trị ban đầu cx k được vì zk proof đã chứng minh người dùng có thể withdraw mà k lộ địa chỉ của người deposit. 
+
+--> Cơ chế hoạt động:
+User deposit 1ETH vào sinh ra hash(secret, nullifier) lưu trong blockchain, nhiều người deposit 1ETH vào sẽ sinh ra các mã hash khác nhau lưu trong blockchain. Nếu họ có khả năng cung lại secret và nullifier mà hash(secret, nullifier) ra đúng cái lưu trong blockchain thì họ có thể rút ra 1ETH từ tornadol cash. 
+Tornadol cash cho phép user deposit các mốc 0.1ETH, 1ETH, 10ETH, 100ETH. Nếu ai cũng deposit được 1 lượng tùy ý thì khi rút ra đúng lượng đó, người ngoài sẽ hiểu là vẫn chính là người đó rút. Nhưng nếu 10 người cùng deposit 1ETH, 1 người rút ra 1ETH thì họ sẽ k thể biết được account nhận thuộc về ai trong 10 người kia.
+
+Vấn đề 1: Tx public trên chain, nếu người dùng cung vào secret và nullifier để rút, người khác sẽ thấy và biết được account deposit và withdraw là 1 người vì chỉ có người deposit ban đầu mới biết secret bí mật mà truyền vào nên họ phải là 1.
+=> ZKP xử lý với cơ chế proof đã biến đối đầu vào, người dùng chứng minh mình sở hữu secret và nullifier có hash trùng với 1 hash(secret, nullifier) lưu trên chain mà k tiết lộ secret và nullifier là gì. Khi đó, họ chỉ biết người rút là 1 trong số các người có hash trên chain chứ kb cụ thể là ai. 
+
+Để làm được điều đó nhanh nhất họ dùng merkle tree. Cái list hash kia biến thành 1 merkle tree và check mã hash kia có phải nút lá trong merkle tree hay không bằng cách hash liên tục để dựng lại cái merkle root và ss 2 merkleroot với nhau
+
+Vấn đề 2: Tức họ cung vào secret, nullifier bí mật + mảng hash lưu trên chain là public và tiến hành check trong mạch rằng hash(secret, nullifier) là 1 phần tử trong list. Nhưng họ cứ dùng cái secret, nullifier đúng đó nhiều lần để rút ra thì sao, vì cái mạch check luôn thỏa mãn mà. 
+Do đó cần 1 cơ chế để biết đoạn hash nào đã rút tiền rồi thì k cho rút nữa. Nếu ta mapping(hash=>bool) thì lộ ngay vì người dùng chỉ cần check thg receiver biến đoạn hash nào mapping thành true và đoạn hash đó sinh bởi thg nào deposit là xong. Do đó cần 1 biến mapping độc lập với mảng hash để check bằng chứng nào đã được dùng. 
+
+Do đó mới cần nullifier để đánh dấu "bằng chứng nào đã được dùng để rút tiền sẽ k còn hợp lệ nữa". Nó gắn thẳng nullifier vào bằng chứng luôn. Chain sẽ lưu thêm 1 cái mapping(hash(nullifier)->bool) để check đoạn hash nào chưa được sử dụng. 
+Tức người dùng truyền vào secret, nullifier, hash(nullifier) -> check hash(secret, nullifier) có trong list -> check hash(nullifier) chưa được sử dụng -> check hash(nullifier) hợp lệ chứ kp truyền bừa vào bằng cách check hash(nullifier) = nullifier hash -> ok
+
+
+
+-> Tornado Cash Intermediate:
+
+
+
