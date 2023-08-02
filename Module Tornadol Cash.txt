@@ -118,6 +118,8 @@ Trong solidity implement nó cũng ok, để chạy cùng 1 hàm hash trong cont
 -> Groth 16
 Witness chứa mọi thứ và lộ thông tin bí mật, ta cần phải transform (encode) nó thành 1 dạng khác trước khi truyền vào hàm verify để chứng minh witness là đúng. Groth 16 giúp làm điều đó
 
+Bổ đề cho groth 16(Schwartz–Zippel lemma): 2 polynomial k trùng nhau thì giao nhau ở nhiều nhất n điểm với n là số mũ cao nhất của 2 cái. Vd 2 phương trình bậc 2 giao nhau sẽ k có quá 2 nghiệm. Hiển nhiên phương trình bậc n k được có quá n nghiệm, chuyển vế là ra mà
+
 --> Lý thuyết:
 Input (dạng plain text) là witness cần che giấu -> R1CS (first step of transformation) sẽ flatten circuit, các witness value được sắp xếp gọn gàng trong system equations. Cụ thể nó chỉ chứa phép cộng và mỗi equation chỉ chứa 1 phép nhân -> Polynomials (hay QAP - Quadratic arithmetic program) tức biểu diễn tất cả dưới dạng hàm đa thức f(x) đơn giản => Tức cuối cùng từ plain text, ta có đa thức là giá trị đã được encode
 => Thay vì chứng minh người dùng sở hữu input dạng plain text sẽ lộ, ta chứng minh họ cung ra đa thức kia là đúng
@@ -191,10 +193,10 @@ Cách dùng: https://tornadocash.eth.link/
 Đợi vài ngày, vì nếu withdraw ngay mà k có tx nào khác trên tornadol cash, có khả năng sẽ bị phát hiện là người vừa deposit 10ETH, xong withdraw 10ETH đó là cùng 1 người
 Nhập lại key bí mật từ file vào và nhập vào 1 địa chỉ khác để nhận -> ấn withdraw sẽ bắt đầu sinh zk proof. Ấn confirm sẽ truyền proof đó vào ok. Khoản tiền nhận lại bị trừ vài phần trăm trả cho dev.
 
-Check sẽ thấy sender deposit ETH, receiver nhận về ETH từ 1 địa chỉ lạ và k có cách nào tìm ra được người sender ban đầu. Dù có decrypt cái tx ra giá trị ban đầu cx k được vì zk proof đã chứng minh người dùng có thể withdraw mà k lộ địa chỉ của người deposit. 
+Check sẽ thấy sender deposit ETH, receiver nhận về ETH từ 1 địa chỉ lạ và k có cách nào tìm ra được người sender ban đầu. Dù có decrypt cái tx ra giá trị ban đầu cx k được vì zk proof đã chứng minh người dùng có thể withdraw mà k lộ địa chỉ của người deposit. Đúng hơn là 1 cái proof chứng minh người nhận được quyền rút ETH bởi trước đó họ đã từng deposit nhưng che giấu tất cả thông tin về người deposit đó là xong.
 
 --> Cơ chế hoạt động:
-User deposit 1ETH vào sinh ra hash(secret, nullifier) lưu trong blockchain, nhiều người deposit 1ETH vào sẽ sinh ra các mã hash khác nhau lưu trong blockchain. Nếu họ có khả năng cung lại secret và nullifier mà hash(secret, nullifier) ra đúng cái lưu trong blockchain thì họ có thể rút ra 1ETH từ tornadol cash. 
+User deposit 1ETH vào sinh ra hash(secret, nullifier) (sinh random) lưu trong blockchain, nhiều người deposit 1ETH vào sẽ sinh ra các mã hash khác nhau lưu trong blockchain. Nếu họ có khả năng cung lại secret và nullifier mà hash(secret, nullifier) ra đúng cái lưu trong blockchain thì họ có thể rút ra 1ETH từ tornadol cash. 
 Tornadol cash cho phép user deposit các mốc 0.1ETH, 1ETH, 10ETH, 100ETH. Nếu ai cũng deposit được 1 lượng tùy ý thì khi rút ra đúng lượng đó, người ngoài sẽ hiểu là vẫn chính là người đó rút. Nhưng nếu 10 người cùng deposit 1ETH, 1 người rút ra 1ETH thì họ sẽ k thể biết được account nhận thuộc về ai trong 10 người kia.
 
 Vấn đề 1: Tx public trên chain, nếu người dùng cung vào secret và nullifier để rút, người khác sẽ thấy và biết được account deposit và withdraw là 1 người vì chỉ có người deposit ban đầu mới biết secret bí mật mà truyền vào nên họ phải là 1.
@@ -202,7 +204,7 @@ Vấn đề 1: Tx public trên chain, nếu người dùng cung vào secret và 
 
 Để làm được điều đó nhanh nhất họ dùng merkle tree. Cái list hash kia biến thành 1 merkle tree và check mã hash kia có phải nút lá trong merkle tree hay không bằng cách hash liên tục để dựng lại cái merkle root và ss 2 merkleroot với nhau
 
-Vấn đề 2: Tức họ cung vào secret, nullifier bí mật + mảng hash lưu trên chain là public và tiến hành check trong mạch rằng hash(secret, nullifier) là 1 phần tử trong list. Nhưng họ cứ dùng cái secret, nullifier đúng đó nhiều lần để rút ra thì sao, vì cái mạch check luôn thỏa mãn mà. 
+Vấn đề 2: Tức họ cung vào secret, nullifier và merklepath bí mật + merkle root lưu trên chain là public và tiến hành check trong mạch rằng hash(secret, nullifier) là 1 phần tử trong list (bằng cách xây lại được merkleroot). Nhưng họ cứ dùng cái secret, nullifier đúng đó nhiều lần để rút ra thì sao, vì cái mạch check luôn thỏa mãn mà. 
 Do đó cần 1 cơ chế để biết đoạn hash nào đã rút tiền rồi thì k cho rút nữa. Nếu ta mapping(hash=>bool) thì lộ ngay vì người dùng chỉ cần check thg receiver biến đoạn hash nào mapping thành true và đoạn hash đó sinh bởi thg nào deposit là xong. Do đó cần 1 biến mapping độc lập với mảng hash để check bằng chứng nào đã được dùng. 
 
 Do đó mới cần nullifier để đánh dấu "bằng chứng nào đã được dùng để rút tiền sẽ k còn hợp lệ nữa". Nó gắn thẳng nullifier vào bằng chứng luôn. Chain sẽ lưu thêm 1 cái mapping(hash(nullifier)->bool) để check đoạn hash nào chưa được sử dụng. 
@@ -210,7 +212,185 @@ Tức người dùng truyền vào secret, nullifier, hash(nullifier) -> check h
 
 
 
--> Tornado Cash Intermediate:
+-> Tornado Cash Intermediate
+Tornadol Cash gọi là 1 crypto mixer có đầu vào bị mix, đầu ra k thể truy ngược (Dùng zkp thì cơ chế k thực sự mix như các máy mixer bth).
 
+Nullifier an toàn vì lúc deposit k set nullifier mà để toàn 0 mặc định, nullifier chỉ được set sau khi withdraw nên k ai biết nullifier có liên hệ với hash(secret, nullifier) ban đầu. Vc nullifier là mapping để lấy cho nhanh, nếu nó là mảng thì cũng k sai về mặt logic nhưng nếu k qt đến số lượng phần tử thì nên dùng mapping hơn
+Nullifier và secret sinh random, ta có thẻ đảm bảo k trùng vì sinh hash hoàn toàn random trong blockchain k thể trùng do quá lớn.
+
+TC dùng merkle tree để check nhanh nhất với 2^20 node max. Quá số node này là TC sập. 
+Ở đây ta lưu các node lá bằng Event để người dùng lấy (index, hash). Nó cũng tương tự việc lưu vào biến mapping storage trong contract thôi nhưng ở đây ta dùng event cho chuẩn.
+Mặc định giá trị node lá là 0 và cây đủ, khi có hash mới vào sẽ xây lại path đó trên cây
+
+Để xây lên node lá, mỗi lần phải truyền vào mạch merkle path là 1 mảng 20 phần tử chứa các phần tử cần hash liên tục lên node lá. Merklepath đó do người dùng lấy từ event ra và build lại
+
+Khi người dùng deposit, SM cần lưu và tính toán lại uint root. Để tính lại root, đương nhiên SM k thể lưu mọi node lá để hash từng level ra root được mà nó chỉ cần lưu 1 biến fillSubtree. Biến này lưu merklepath của node mới nhất được deposit. Có merkle path của node n, việc tính merklepath của node n+1 rất dễ.
+Nguyên tắc là ta chỉ lưu các thứ tối thiểu cần thiết, chỉ tính toán vào thời điểm dễ tính nhất là được.
+
+Tức tornadol cash lưu 1 biến root là uint và 1 mảng 20 phần tử fillSubtree là tất cả mọi thứ về merkle tree trên SM
+VD:
+       c
+   a       b
+ x   y   z   k
+1 2 3 4 5 6 7 8
+Giả sử thằng số 3 deposit vào làm sửa y, a, c
+Khi thằng 7 deposit xong, thằng 3 muốn rút sẽ cần 4, x, b, c
+=> b và c chắc chắn lấy đươc trên contract rồi.
+=> x và 4 lấy thông qua event nó phát ra. Lấy x bằng cách lấy 1 và 2 thông qua event nó phát ra. Vì chỉ ta biết là index = 3 và thực hiện việc đó ở local luôn
+=> Tạo thành merkle path nhét vào private var
+
+Khi ta deposit ta sinh (secrete, nullifier) lưu ở local. 
+Khi withdraw ta cung lại thì nó check hash(secret, nullifier) tồn tại trong 1 event nào đó của contract thì data này là đúng trước đã. Sau đó ta sinh bằng chứng thông qua việc nó lấy mọi event và xây được merklepath và generate ra bằng chứng. Cuối cùng mới withdraw thì cung bằng chứng vào để xác thực là được.
+=> Tránh hiểu sai là deposit sinh proof và withdraw thì verify. Ở đây deposit chỉ sinh secret info lưu máy client local thôi. Sau đó khi withdraw mới sinh bằng chứng dựa vào secret info vì chỉ có người biết secret info mới sinh được bằng chứng có private input thỏa mãn public input gắn với SM đó, rồi mới verify để withdraw thực sụ
+
+Vấn đề 1: Ta rút tiền vào tài khoản A và sinh proof đúng. Nhưng miner thấy thế liền giữ proof đó nhưng lại đổi tk người nhận thành hắn và đặt phí gas cao hơn để tx của hắn được ưu tiên mine trước là toang. 
+=> Ta truyền thêm receipient vào proof và trong mạch check gì đó để có intermediate signal liên quan đến proof đó như intermediateSig <== address*address thì nếu miner đổi address sẽ k pass qua được do proof sai (vì proof là intermediate kia ra kết quả khác)
+
+Vấn đề 2: Ta vừa sinh proof xong. Định withdraw thì trong khoảng đó có 1 người khác deposit vào. Thành ra biến root ta sinh bị sai so với biến trên contract. 
+=> Để đảm bảo người kia chạy đúng thì tornadol cash không lưu 1 biến root mà lưu 30 biến root gần nhất. Nếu 1 biến root vượt quá 30 sẽ quay index lại về 0 và lưu tiếp. Sau đó ta chỉ cần check root ta truyền vào là 1 trong 30 root gần nhất là được. Tức đảm bảo thành công với 30 người đồng thời deposit ngay sau khi 1 người sinh bằng chứng. Nếu vượt quá thì họ chỉ cần sinh lại proof khác là được.
+Cách này an toàn và k thể bị hack vì root họ truyền vào hàm withdraw luôn là root mới nhất. Do đó kể cả chưa qua 30 tx mà withdraw vẫn k sao, chỉ gặp vấn đề khi họ gửi phát rồi chả có ai deposit mà rút luôn thì có thể bắt được
+
+Nếu 1 circuit chỉ check logic thì ta cũng biết được rằng bất cứ ai cũng có thể bịa ra input cho mạch để pass qua. Nhưng chỉ cần đặt 1 điều kiện cho 1 trong các public input gắn liền với SM là xong, các private input khác sẽ k thể bịa ra để thỏa mãn mạch với public input đó được nữa, muốn tạo private input chuẩn, hắn buộc phải nắm giữ secret.
+Tornadol cash gắn root với contract, sau đó private input buộc phải biết (secret, nullifier) tại 1 index nào đó mới thỏa mãn mạch chứ k thể bịa ra private input được vì bịa thêm public input sẽ k thỏa mãn điều kiện gắn với contract
+
+Ta hiểu sai về ZKP. Quy trình cụ thể ZKP:
+- Khi ta code xong mạch và build xong mạch là ok. Khi ta set xong ptau và lấy ra zkey sau cùng ok. Lúc này ta cung ra 1 contract verifier trong solidity hoàn chỉnh rồi. Mạch có private input và public input ok luôn.
+- Khi người dùng vào tương tác với smartcontract, họ phải sinh proof. Frontend xử lý tính private input và public input ở local nên rất an toàn. Họ dùng private/public input + zkey + mạch sinh ra proof lưu lại trên máy họ.
+- Khi họ cần verify cái proof này trên contract: họ truyền vào proof + public input là xong
+=> Tức là lúc sinh ra proof ở local frontend đã phải dùng public input rồi. Sau đó khi gọi verify lại phải truyền vào public input, còn private input đã fix cứng thành proof rồi. ***Public input đó phải trùng giá trị với public input dùng lúc sinh ra proof ở local***. 
+Tức hàm verify đã mặc định check 2 public input lúc sinh proof và lúc verify phải trùng nhau rồi. Thực tế điều này là hiển nhiên vì input nó được tính sẵn hết trong proof, nếu public input bị sửa đổi, 1 intermediate signal nào đó chắc chắn tính ra bị sai -> tức proof sai. Nếu public input mà ta chả viết intermediate input nào liên quan thì proof vẫn k sai đâu, đó mới là bản chất
+
+Tương tự truyền thêm gas hay các thứ tự xác định vào, cái gì truyền vào và viết check thì miner k thể can thiệp được nữa. Gọi là tính chất non-malleability
+
+Như v thì cơ chế đơn giản hơn ta tưởng. Ta muốn che dấu ta đang là node số 3, đương nhiên ta có thể lấy mọi node khác thông qua event offline. Rồi construct sao cho bằng node root mới nhất trên cây. Thế thì người khác chỉ biết là 1 node chưa từng rút có thể xây lên root mới nhất trên cây, chứ đâu biết rõ node nào.
+=> lần sau đọc cái gì thì đừng nhìn code vội
+
+Luồng:
+- User deposit: 
+User tự sinh và lưu (secret, nullifier)
+Xây lại fillSubTree mới từ fillSubtree cũ (là merkle path node lá mới nhất được deposit), xây root mới, bắn sự kiện là node lá hash(secret, nullifider)
+- User withdraw:
+User bắt mọi event xây ra merkle path và merkle index (để biết hash các phần tử của path trái hay phải) xây ra root mới nhất
+User xây proof lên dựa vào private input (secret, nullifier, merkleindex, merklepath) và public input (root, receipient, gas, hash(nullifier))
+Mạch check hash(nullifider) chuẩn, xây đúng node root đó
+Contract check root tồn tại trong 30 root gần nhất, gán hash(nullifier)=>true
+
+Thông tin khác:
+Tornadol cash dùng relayer thanh toán gas hộ user nhưng bị user lạm dụng nó cho việc khác nên đã k dùng được nữa, thay vào đó, receipient phải có tiền để withdraw.
+
+TC còn có compliant tool. Khi user withdraw xong deposit vào coinbase thì nó từ chối vì coinbase phải KYC và k nhận tiền mà nguồn anonymous. Compliance tool của TC sẽ giúp generate report chứng minh nguồn tiền withdraw là hợp pháp. Ta có thể trình to coinbase để có thể cung vào và rút ra tiền mặt
+
+Tương tự có: ZCash và IRONFISH, Sapling(ZCash v2)
+
+
+
+-> (Tornado Cash Advance): Xây lại 1 tornaldo cash ở mức đơn giản hơn
+User chỉ có 1 mốc deposit là 1ETH thay vì 4 mốc
+K sử dụng relayer trả phí gas hộ mà address withdraw phải tự trả gas
+Cây merkle tree height là 10
+nullifier k và secret r đều dùng 256 bits (bản gốc dùng 248 bits), (k, r) gọi là commitment
+Mỗi tx rút sẽ gửi 1 phần fee vào relayer address, vừa giúp trả phí gas cho người sau mà dev cũng có thể ăn luôn ở đó, ta sẽ bỏ qua.
+
+-> Thuật hashing H1 Pedersen hash function biến 1 chuỗi {0,1} thành 1 số nguyên trong prime field (bitwise hashing function), nó dùng để tạo hash(nullifier) và cũng dùng tính commitment node lá là H1(k, r). 
+Chính vì nó biến mọi chuỗi 01 thành 1 số nguyên tức nó có thể dùng để hash bất cứ thứ gì vì mọi thứ đều biểu diễn được dưới dạng binary. Nó được xây bằng thuật mã hóa eliptic curve. 
+Pedersen chỉ cần thực hiện ở circom cho frontend dùng vì contract k cần thực hiện hash lại nullifier
+
+Thuật hashing H2 MiMC function dạng feistel mode với sponge construction biến 2 số trong prime field thành 1 số khác trong prime field và dùng để hash 2 node lá thành 1 node.
+MiMC cần thực hiện ở solidity để contract xây lưu lại node và circom để contract check path xây lên root
+
+Feistel được dùng nhiều trong mật mã đối xứng như DES. Nó chia plaintext thành 2 nửa và áp dụng các vòng lặp trộn lại rồi ghép 2 nửa lại để có ciphertext. Nó tạo tính diffusion vì 2 nửa lần lượt đi qua các khối MiMC rồi đảo lại để dù trong plain text có nhiều đoạn trùng thì đầu ra vẫn khác. 
+Sponge được dùng trong thuật toán hàm băm như SHA-3. Nó nhận đầu vào k giới hạn và đầu ra dài cố định. Nó dùng hàm bốc thăm absorbing function nhận đầu vào liên tục lặp lại cho đến hết và hàm ép squeezing function tạo đầu ra theo kích thước tùy ý.
+=> Kết hợp lại ta có 1 mật mã biến đổi hoàn toàn đầu vào dài vô hạn thành đầu ra thay đổi.
+
+Implement lại 2 thuật toán để dùng phù hợp với ZKP, dùng như blackbox trong dự án thực:
+URL: https://www.youtube.com/watch?v=LZqrP_cvJw0&list=PL_SqG412uYVYtEM8B8xNccFyhrGsMV1MG&index=11
+
+-> Ta nên dùng hardhat fork mainnet để test tính năng nếu đã deploy sẵn thì kbh sợ hết tiền trong tk.
+
+
+
+*Các bước: Ta code theo 1 luồng frontend và các thứ khác để thỏa mãn frontend
+- Frontend sử dụng Metamask thuần trong docs để kết nối ví: https://docs.metamask.io/wallet/reference/rpc-api/#table-of-contents
+
+- Ấn vào deposit sẽ gọi hàm deposit của contract. Cần tính 2 hash để truyền vào. Ta k dùng js mà lấy 2 hash thông qua mạch circom.
+
+Tạo circuit deposit.circom để frontend dùng sinh ra hash(secret, nullifier) và hash(nullifider):
+circom deposit.circom --wasm
+Để frontend tương tác với mạch, ta chỉ cần 2 file wasm và witness_calculator. Thực tế compile mạch sẽ sinh ra file js này chứa sẵn các hàm tương tác với mạch mà ta dùng trực tiếp ở frontend thôi.
+
+Chạy testchain của harhhat: npx hardhat node. Thêm vào ví metamask.
+
+Ta code contract và deploy lên mạng test:
+npx hardhat compile -> mỗi lần sửa phải build và copy file abi mới vào frontend
+Viết code deploy -> npx hardhat run scripts/deploy.js --network localhost
+Lấy abi và address của contract và gọi hàm deposit
+
+Tạo circuit withdraw.circom check sinh ra đúng root khi nhận được merklepath:
+circom withdraw.circom --r1cs --wasm => compile
+snarkjs powersoftau new bn128 12 ceremony_0000.ptau => sinh file ptau
+snarkjs powersoftau contribute ceremony_0000.ptau ceremony_0001.ptau => contribute file ptau
+snarkjs powersoftau contribute ceremony_0001.ptau ceremony_0002.ptau
+snarkjs powersoftau prepare phase2 ceremony_0002.ptau ceremony_final.ptau => sinh file ptau sẵn sàng cho phase2
+Xóa ceremony_0000.ptau ceremony_0001.ptau ceremony_0002.ptau k cần dùng nx
+snarkjs powersoftau verify ceremony_final.ptau => verify file ptau cuối được sinh ra đúng quy trình
+snarkjs groth16 setup withdraw.r1cs ceremony_final.ptau setup_0000.zkey => sinh zkey qua groth16 setup
+snarkjs zkey contribute setup_0000.zkey setup_final.zkey => contribute cho file zkey
+Xóa file zkey cũ là setup_0000.zkey 
+snarkjs zkey verify withdraw.r1cs ceremony_final.ptau setup_final.zkey => verify zkey sinh ra từ đúng quy trình
+snarkjs zkey export solidityverifier setup_final.zkey Verifier.sol => sinh contract verify signature sinh từ mạch này
+
+=> Chú ý mạch deposit thực ra là để frontend dùng lấy output là hash chứ nó k có nhu cầu sinh signature để verify nên chỉ cần compile với wasm, còn widthdraw thì cần compile với chuẩn với r1cs và cho qua groth16
+
+Nhét file sol vào backend và chỉnh hardhat config dùng version solidity của nó
+
+- Ấn widthdraw thì lấy data cần để sinh bằng chứng widthdraw:
+Cài snarkjs cho frontend, dùng script file snarkjs.min.js
+
+- Deploy backend vào goerli:
+Viết config mạng goerli trong hardhat config với thông tin trong file env. Gồm etherscan apikey, rpc url (alchemy), private key account để deploy contract
+npx hardhat run scripts/deploy.js --network goerli
+
+Ta cũng muốn publish contract ode lên etherscan (sau khi có apikey của etherscan goerli):
+npx hardhat verify --network goerli <address trên goerli> <params constructor 1 (nếu có)> <params constructor 2> <..>
+=> Phải làm v với từng contract đã deploy
+
+- Deploy frontend:
+Setup lại abi và address vào frontend
+Check chain id khác goerli thì báo phải chuyển chain
+
+Làm bản này có 2 vấn đề:
+1) Cách làm gốc là người dùng withdraw sẽ submit hash current index + merklepath lấy từ event. Nhưng cách này ta nhét cả merklepath vào bằng chứng luôn đỡ phải bắt event. Thật ra chả sao cả vì người dùng buộc phải biết hash 1 node chưa được sử dụng mới có thể tạo ra root chuẩn được. 
+2) Nó ss root bằng cách lưu 1 biến mapping boolean. Deposit thì gán là true, withdraw thì cái root truyền vào phải từng là true rồi => Do đó bản youtube này bị sai về bảo mật trừ khi việc gán mapping bằng true trong contract k thể truy ngược.
+=> Để bảo mật chuẩn có thể làm như cách tự nghĩ bên dưới hoặc mỗi lần lấy là bắt event để tính ra được root mới nhất thôi chứ mỗi lần withdraw k dùng 1 cái root có liên hệ với khi deposit
+
+
+
+-> Thử tự nghĩ tornadol cash mà k làm theo bản gốc (Quy tắc bắt buộc tuyệt đối)
+Cũng chỉ là 1 contract mà 10 người deposit tiền vào và họ có thể rút tiền ra bằng 1 tài khoản khác. Điều đặc biệt là thỏa mãn 2 rules:
+1) Người nào deposit có thể rút lại khoản đó ra tk khác 1 lần duy nhất
+2) K thể truy ngược ai deposit từ người rút tiền
+
+Bắt buộc: Để người rút và người cọc k liên quan nhau, người deposit buộc phải ký 1 thông tin bí mật và đưa cho withdrawer, withdrawer có thông tin bí mật đó thì có thể rút tiền ra.
+Ví dụ ta lưu hash(secret) và ai truyền vào secret hash được đúng ra hash(secret) thì được rút. Điều kiện để rút ra 1 lần duy nhất thì lưu thêm (hash=>bool) là xong. Do hash có nhiều nên lưu vào 1 mảng chẳng hạn 
+
+Nhưng như v vẫn chưa đảm bảo điều kiện 2 là k thể truy ngược người rút tiền vì chỉ cần check ai tạo ra hash ban đầu trùng với hash(secret) thì chính là người deposit. Do đó mới cần ZKP để "chứng minh 1 người sở hữu secret có hash(secret) = 1 hash lưu trên chain mà không lộ hash, secret, hay người đó". 
+Cái ZKP này có input là secret và mảng các hash và chỉ cần chứng minh hash(secret) tồn tại trong mảng là được.
+
+Nhưng nên nhớ là contract và ZKP đều không chơi với mảng quá dài, muốn truyền mảng hay return trong contract hoặc dùng trong ZKP thì số lượng phần tử phải hữu hạn và k quá lớn. Ta có thể fix bằng cách lưu 1 biến state là mảng các hash, nhưng khi contract sử dụng sẽ chỉ dùng 30 phần tử liên tiếp. VD ta chia kiểu từ 1-30 thuộc nhóm 1, 31-60 thuộc nhóm 2 và cứ thế. 
+Khi đó cần verify thì truyền biến public vào contract là số thứ tự của nhóm, contract sẽ cắt 30 phần tử từ mảng ra truyền vào mạch. ZKP nhận public input là 30 phần tử của nhóm, private input là secret. Khi đó nó check hash(secret) thuộc 30 phần tử kia hay không là được. Do số lượng là hữu hạn nên ok. 
+Người bên ngoài bắt số thứ tự nhóm k thể mò được vì người deposit là 1 trong số 30 người trong nhóm. Khi rút tiền cần đảm bảo nhóm càng có nhiều người đã deposit càng tốt. 
+
+Nhưng chưa thể tránh việc họ submit secret 2 lần. Để làm được điều đó k thể cho (hash=>bool) được vì bắt tx chuyển hash nào thành true là lộ ngay. Tức là cần lưu check 1 hash đã dùng rồi không được lộ là hash nào. Cách duy nhất là mỗi khi rút, ta lưu 1 biến (random=>bool) gán là true, nếu rút lần 2 biến random là false sẽ k thể rút. Nhưng người dùng có thể bịa số random mới truyền vào mỗi khi rút thì chết, do đó số random này phải gắn liền với hash mà k được để lộ hash => Cách duy nhất là lúc tạo hash, ta nhét thêm số random vào
+
+Chốt: 
+- Khi user deposit tiền vào contract sẽ sinh ra ngẫu nhiên cặp (secret, số random) và contract lưu hash(secret, số random) = true, trả lại order của nhóm.
+- Người dùng muốn rút sẽ dùng 1 tk khác sinh ra bằng chứng có private input là (secret, số random). 
+- Người dùng rút sẽ truyền vào contract hàm withdraw (order nhóm, số random, signature). Contract check số random chưa được sử dụng, cắt ra 30 phần tử hash của nhóm từ mảng và truyền vào hàm verify public input (30 phần tử nhóm, số random). Mạch check số random public truyền vào trùng với số random private + hash(secret, số random) nằm trong số 30 phần tử mảng => thỏa mãn thì cho rút và gán (random=>true).
+
+Để tránh frontrunning, nó thêm người nhận và khoản tiền rút vào public input của signature là được.
+
+Nếu nhiều người rút tiền và deposit cùng lúc thì chả ảnh hưởng gì
+
+=> Thực tế chỉ có v nhưng trong bản gốc sử dụng merkle tree nên contract lưu nhẹ nhàng hơn. Thay vì lưu toàn bộ vào mảng, nó lưu node vào event và contract lưu mỗi node root và merkle path mới nhất. Thay vì check hash(secret, random) tồn tại trong group nào như ta, nó sẽ check 1 node tồn tại ở vị trí nào kết hợp với merklepath mà xây nên được node root hiện tại của cây.
 
 

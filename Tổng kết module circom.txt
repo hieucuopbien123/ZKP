@@ -75,8 +75,9 @@ VD: Xác thực 1 người là thành viên của group mà k cần show chức 
 
 # Setup
 -> Cài đặt:
-Phải cài Rust vì circom compiler bản mới nhất được viết bằng Rust chứ k còn bằng JS. Muốn cài rust lại phải có visual studio installer
-Cài chi tiết trong docs bao gồm cả compile các thứ
+K được cài package circom npm đã cũ => nếu cài phải xóa: npm remove -g circom
+Phải cài Rust vì circom compiler bản mới nhất được viết bằng Rust chứ k còn bằng JS. Muốn cài rust lại phải có visual studio installer => xem docs của rust để cài riêng
+Cài chi tiết circom trong docs bao gồm cả compile các thứ
 Có rust sẽ tự cài cargo là 1 loại package giúp install các package khác
 Build xong cục circom, nó tự thêm vào environment path cho ta nên dùng được lệnh (circom --help) từ đó
 

@@ -42,7 +42,7 @@ Ví dụ: Alice muốn chứng minh cho Bob rằng cô ấy có mật khẩu đ�
 Optimism là blockchain riêng nhưng nó là mở rộng layer2 của Ethereum. OP là đồng coin quản trị của mạng Optimism và người dùng có thể dùng nó để tham gia vào mạng này như voting các thứ như chọn validator chẳng hạn. Arbitrum cũng tương tự là layer 2 blockchain của ethereum và đồng ARB là coin nền tảng nhưng thanh toán gas bằng ETH. Nên mở ví metamask sẽ thấy lượng ETH có trong mạng. 
 Thực tế 2 blockchain layer 2 này dùng giải pháp mở rộng Optimistic Rollup kiểu tổng hợp nhiều transaction lại thành 1 cụm rồi gửi lên Ethereum 1 thể nên chỉ gom lại thành 1 transaction với phí gas rẻ hơn. 
 
-Optimistic Rollup sử dụng fraud proof. Còn ZKRollup sử dụng zero knowledge proof
+Optimistic Rollup sử dụng fraud proof. Còn ZKRollup sử dụng zero knowledge proof (valid proof)
 
 -> Tổng quan:
 Các giải pháp layer 2: ZK-Rollups, Optimistic Rollups, Sidechains, State Channel... nhưng qtr nhất vẫn là ZK-Rollups và Optimistic Rollups
@@ -123,80 +123,12 @@ ZKEVM giống EVM nhưng hõ trợ ZKP, vẫn compile solidity sm. ZKEVM hỗ tr
 
 
 # ZKSnark
-Loại NIZK dùng phổ biến nhất là zk-SNARK proofs. Nó có 2 điểm lợi là tạo proof kích thước nhỏ và thời gian verify nhanh dù mạch có lớn đến mấy.
-
-ZKSnark chứa 3 hàm: 
-Generator G(secret lamba, program C) = (proving key pk, verification key vk) => Nó là đặc trưng của mạch C và chỉ cần generate 1 lần
-Prover P(pk, public input x, private witness w) = proof prf chứng minh private witness w là thỏa mãn 
-Verifier V(vk, public input x, proof prf) = true/false
-
-Vấn đề: dù k hiểu nhưng secret lamba dùng trong G nếu để lộ, người khác sẽ tạo ra được fakeproof để V(vk, public input x, fakeproof) luôn bằng true. Do đó tham số này được sinh random và che giấu, họ cũng làm cho qtr sinh key trở nên rất phức tạp và loại bỏ tham số lamba lộ ra ngoài trong qtr sinh key từ mạch.
-
--> VD1 klq tới blockchain: Alice chứng minh rằng sở hữu w mà Hash(w) = x cho Bob.
-function C(x, w) {
-  return ( sha256(w) == x );
-}
-Bob sinh key: (pk, vk) = G(C, lambda) và che dấu lamba vì nếu lộ, Alice sẽ tạo ra fakeproof mà Bob verify luôn ra true
-Alice sinh proof: prf = P(pk, x, w)
-Bob xác thực bằng V(vk, H, prf) = true là được
-
-Nếu ngược lại, Bob cũng sở hữu w2 mà Hash(w2) = x2 thì k thể tái sử dụng (pk, vk) mạch trên được vì Alice k tin Bob đã giấu lamba ở đâu đó. Khi đó Alice lại phải sinh 1 mạch nx. 
-Để tái sử dụng sẽ phải tin 1 bên thứ 3 cung (pk, vk), xác thực giữa 2 người mà lại cần bên thứ 3 vào rất k tốt.
-
--> Trong Ethereum:
-Vc sinh 2 key được làm offchain và lamba được che giấu hoàn toàn khi dùng thư viện đến cả người sinh key cũng chả biết. Gọi là zkey và verification_key
-Prover tạo bằng chứng offchain
-SM onchain chính là verifier có hàm xác thực và perform các action tương ứng.
-
-VD: Confidential Transactions là transaction mà k lộ khoản tiền giao dịch.
-Tạo 1 token ERC20 lưu balance nhưng k ai check được balance, bằng cách dùng: 
-mapping (address => bytes32) balanceHashes; thay vì mapping (address => uint256) balances;
-
-A chuyển tiền cho B: contract phải check A đủ balance rồi update balance của 2 người nhưng k thể thấy balance mà chỉ thấy hash. Do đó cần check balance bằng ZKSnark.
-URL: https://consensys.net/blog/developers/introduction-to-zk-snarks/
-
-VD: mạch phía sender
-function senderFunction(x, w) {
-  return (
-    w.senderBalanceBefore > w.value &&
-    sha256(w.value) == x.hashValue &&
-    sha256(w.senderBalanceBefore) == x.hashSenderBalanceBefore &&
-    sha256(w.senderBalanceBefore - w.value) == x.hashSenderBalanceAfter
-  )
-}
-=> Đáng lẽ chỉ cần check balance đủ và lượng ban đầu đúng bằng lượng ban đầu trong SM là đủ r. Nhưng ta check thêm hashSenderBalanceAfter để biết sau khi giao dịch thực hiện xong, hash của balance đúng bằng public input x.hashSenderBalanceAfter là đã update balance thành công.
-Cụ thể nó nhận public input và private input xong check giá trị giữa 2 cái. Ta hiểu lầm rằng input của mạch chỉ là số bth với logic thuần mà k lấy được từ data smart contract là sai. Hàm verifier được gọi từ smart contract và tham số public input có thể truyền vào từ các biến trong SM ok.
-
-Tương tự receiver:
-function receiverFunction(x, w) {
-  return (
-    sha256(w.value) == x.hashValue &&
-    sha256(w.receiverBalanceBefore) == x.hashReceiverBalanceBefore &&
-    sha256(w.receiverBalanceBefore + w.value) == x.hashReceiverBalanceAfter
-  )
-}
-Vì người gửi cũng kb người nhận hiện đang có bnh tiền nên cần người nhận tham gia như này để update balance của họ.
-
-Demo chưa phải là confidential transaction:
-User cần phải keep track balance ở client side, nếu họ lỡ làm mất số balance thì phải có cơ chế lấy lại bằng cách encrypted nó với key lưu trên contract
-Sender và recever phải tương tác với nhau ở TH này đê gửi và nhận. Đúng hơn là nên cho 1 bên gửi, 1 bên finalize để nhận.
-
-function transfer(address _to, bytes32 hashValue, bytes32 hashSenderBalanceAfter, bytes32 hashReceiverBalanceAfter, bytes zkProofSender, bytes zkProofReceiver) {
-  bytes32 hashSenderBalanceBefore = balanceHashes[msg.sender];
-  bytes32 hashReceiverBalanceBefore = balanceHashes[_to];
-  
-  // Truyền vào public input giá trị từ SM
-  bool senderProofIsCorrect = zksnarkverify(confTxSenderVk, [hashSenderBalanceBefore, hashSenderBalanceAfter, hashValue], zkProofSender);
-  bool receiverProofIsCorrect = zksnarkverify(confTxReceiverVk, [hashReceiverBalanceBefore, hashReceiverBalanceAfter, hashValue], zkProofReceiver);
-
-  if(senderProofIsCorrect && receiverProofIsCorrect) {
-    balanceHashes[msg.sender] = hashSenderBalanceAfter;
-    balanceHashes[_to] = hashReceiverBalanceAfter;
-  }
-}
 
 
 
 # Project BattleZip
 
 # Project Tornadol Cash
+Giúp hiểu từng bước tạo mạch, contract, frontend tương tác, từng bước truyền tham số vào mạch, dùng snark lấy bằng chứng đủ thứ
+
+

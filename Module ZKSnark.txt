@@ -1,0 +1,142 @@
+ZKSnark
+
+
+
+# Basic
+Loại NIZK dùng phổ biến nhất là zk-SNARK proofs. Nó có 2 điểm lợi là tạo proof kích thước nhỏ và thời gian verify nhanh dù mạch có lớn đến mấy.
+
+ZKSnark chứa 3 hàm: 
+Generator G(secret lamba, program C) = (proving key pk, verification key vk) => Nó là đặc trưng của mạch C và chỉ cần generate 1 lần
+Prover P(pk, public input x, private witness w) = proof prf chứng minh private witness w là thỏa mãn 
+Verifier V(vk, public input x, proof prf) = true/false
+
+Vấn đề: dù k hiểu nhưng secret lamba dùng trong G nếu để lộ, người khác sẽ tạo ra được fakeproof để V(vk, public input x, fakeproof) luôn bằng true. Do đó tham số này được sinh random và che giấu, họ cũng làm cho qtr sinh key trở nên rất phức tạp và loại bỏ tham số lamba lộ ra ngoài trong qtr sinh key từ mạch.
+
+-> VD1 klq tới blockchain: Alice chứng minh rằng sở hữu w mà Hash(w) = x cho Bob.
+function C(x, w) {
+  return ( sha256(w) == x );
+}
+Bob sinh key: (pk, vk) = G(C, lambda) và che dấu lamba vì nếu lộ, Alice sẽ tạo ra fakeproof mà Bob verify luôn ra true
+Alice sinh proof: prf = P(pk, x, w)
+Bob xác thực bằng V(vk, x, prf) = true là được
+
+Nếu ngược lại, Bob cũng sở hữu w2 mà Hash(w2) = x2 thì k thể tái sử dụng (pk, vk) mạch trên được vì Alice k tin Bob đã giấu lamba ở đâu đó. Khi đó Alice lại phải sinh 1 mạch nx. 
+Để tái sử dụng sẽ phải tin 1 bên thứ 3 cung (pk, vk), xác thực giữa 2 người mà lại cần bên thứ 3 vào rất k tốt.
+
+-> Trong Ethereum:
+Vc sinh 2 key được làm offchain và lamba được che giấu hoàn toàn khi dùng thư viện đến cả người sinh key cũng chả biết. Gọi là zkey và verification_key
+Prover tạo bằng chứng offchain
+SM onchain chính là verifier có hàm xác thực và perform các action tương ứng.
+
+VD: Confidential Transactions là transaction mà k lộ khoản tiền giao dịch.
+Tạo 1 token ERC20 lưu balance nhưng k ai check được balance, bằng cách dùng: 
+mapping (address => bytes32) balanceHashes; thay vì mapping (address => uint256) balances;
+
+A chuyển tiền cho B: contract phải check A đủ balance rồi update balance của 2 người nhưng k thể thấy balance mà chỉ thấy hash. Do đó cần check balance bằng ZKSnark.
+URL: https://consensys.net/blog/developers/introduction-to-zk-snarks/
+
+VD: mạch phía sender
+function senderFunction(x, w) {
+  return (
+    w.senderBalanceBefore > w.value &&
+    sha256(w.value) == x.hashValue &&
+    sha256(w.senderBalanceBefore) == x.hashSenderBalanceBefore &&
+    sha256(w.senderBalanceBefore - w.value) == x.hashSenderBalanceAfter
+  )
+}
+=> Đáng lẽ chỉ cần check balance đủ và lượng ban đầu đúng bằng lượng ban đầu trong SM là đủ r. Nhưng ta check thêm hashSenderBalanceAfter để biết sau khi giao dịch thực hiện xong, hash của balance đúng bằng public input x.hashSenderBalanceAfter là đã update balance thành công.
+Cụ thể nó nhận public input và private input xong check giá trị giữa 2 cái. Ta hiểu lầm rằng input của mạch chỉ là số bth với logic thuần mà k lấy được từ data smart contract là sai. Hàm verifier được gọi từ smart contract và tham số public input có thể truyền vào từ các biến trong SM ok.
+
+Tương tự receiver:
+function receiverFunction(x, w) {
+  return (
+    sha256(w.value) == x.hashValue &&
+    sha256(w.receiverBalanceBefore) == x.hashReceiverBalanceBefore &&
+    sha256(w.receiverBalanceBefore + w.value) == x.hashReceiverBalanceAfter
+  )
+}
+Vì người gửi cũng kb người nhận hiện đang có bnh tiền nên cần người nhận tham gia như này để update balance của họ.
+
+Demo chưa phải là confidential transaction:
+User cần phải keep track balance ở client side, nếu họ lỡ làm mất số balance thì phải có cơ chế lấy lại bằng cách encrypted nó với key lưu trên contract
+Sender và recever phải tương tác với nhau ở TH này đê gửi và nhận. Đúng hơn là nên cho 1 bên gửi, 1 bên finalize để nhận.
+
+function transfer(address _to, bytes32 hashValue, bytes32 hashSenderBalanceAfter, bytes32 hashReceiverBalanceAfter, bytes zkProofSender, bytes zkProofReceiver) {
+  bytes32 hashSenderBalanceBefore = balanceHashes[msg.sender];
+  bytes32 hashReceiverBalanceBefore = balanceHashes[_to];
+  
+  // Truyền vào public input giá trị từ SM
+  bool senderProofIsCorrect = zksnarkverify(confTxSenderVk, [hashSenderBalanceBefore, hashSenderBalanceAfter, hashValue], zkProofSender);
+  bool receiverProofIsCorrect = zksnarkverify(confTxReceiverVk, [hashReceiverBalanceBefore, hashReceiverBalanceAfter, hashValue], zkProofReceiver);
+
+  if(senderProofIsCorrect && receiverProofIsCorrect) {
+    balanceHashes[msg.sender] = hashSenderBalanceAfter;
+    balanceHashes[_to] = hashReceiverBalanceAfter;
+  }
+}
+
+
+
+# Lịch sử
+-> Interactive Proof Protocol
+VD: Kil92 là 1 giao thức interactive để chia sẻ secret trong môi trường k đáng tin cậy ra đời từ rất lâu. Có thể dùng nó để chia sẻ khóa bí mật, khóa phiên. Cần cả 2 người tham gia quá trình sinh proof
+Vấn đề là họ muốn k cần cả 2 bên tham gia để sinh proofvì nếu 1 prover có 1000 verifier thì phải tương tác với cả ngàn người đó để sinh 1000 proof khác nhau.
+
+-> Random Oracle mô phỏng 1 hàm băm ngẫu nhiên hoàn hảo dùng trong các thuật toán mã hóa bảo mật cao.
+Vấn đề là họ muốn loại bỏ sự phụ thuộc của RO trong thiết kế mật mã như việc sử dụng các thuật toán khác or dùng kỹ thuật non-interactive
+
+-> Non-interactive tức Prover tạo ra bằng chứng và bất cứ Verifier nào vào verify thoải mái. Quá trình sinh proof độc lập với verifier.
+Vấn đề là họ muốn tối ưu hóa proof.
+
+-> Succinct Non-interactive ARgument of Knowledge (SNARK)
+Proof ngắn vì chỉ cần 1 interaction round với data public, là khi verifier gửi cho prover cái proving key để họ sinh bằng chứng. Proving key gọi là crs(common reference string)
+Nhược điểm là verifier phải pre-processing ở bước Generator (provingkey, verificationkey) - Trusted setup
+
+-> Zero-knowledge SNARK: thêm tính chất zero knowledge nữa
+
+
+
+# Cơ chế
+-> SAT circuit: Boolean satisfiablitiy circuit xác định có thỏa mãn 1 công thức boolean không. 
+
+Mạch SAT rất phức tạp để xử lý các đk phức tạp, witness quá dài. Giải pháp là cho giải 1 phương trình polynomial tương đương.
+VD: Mạch cần nhận input là x thỏa mãn output là y. Tức prover phải chứng minh mình có x mà thỏa mãn mạch y = f(x). Ta k tìm x nữa mà quy về tìm 1 polynomial dạng: P(x) = p1x1 + p2x2 + ... => chung quy là tìm dãy (p0, p1, p2, ...) sao cho P(x)t(x) = v(x)
+
+Nhưng dãy (p0, p1, p2, ...) vẫn quá dài nếu mạch phức tạp, do đó verifier gửi thêm 1 evaluation point s tới prover và prover tính ra P(s), gửi lại P(s) là được. Bởi vì nếu ko biết đa thức P(x) sẽ k thể tính được giá trị tại điểm s là P(s). Ta đang thao tác trong prime field p cực lớn nhé. 
+Nhưng nên nhớ ta đang cần chứng minh mình sở hữu (p0, p1, p2, ...) mà k để lộ dãy này. Để tăng bảo mật, họ không gửi trực tiếp giá trị P(s) mà sẽ ẩn đi bằng cách gửi hàm hash của nó, gọi là P'(s)
+Nhưng để an toàn hơn nữa, họ mã hóa điểm đánh giá luôn. Có nhiều phương pháp mã hóa 1 điểm s, ký hiệu là Enc(s). Sau đó họ tính: Enc(P(s)) = p0*Enc(s^0) + p1*Enc(s^1) + p2*Enc(s^2) + ... và gửi lại Enc(P(s)) gọi là proof PI
+
+Non-falsifiable Assumption: Power Knowledge of Exponent hay d-PKE. Họ nâng cấp hơn nữa là:
+PI = Enc(P(s)) Enc(aP(s))
+Với Enc(aP(s)) = pi*Enc(a*s^i)
+
+Để verify, họ check Enc(aP(s)) = a*Enc(P(s)) và Enc(P(s)) * t(s) = v(s)
+
+-> Computational Model của SNARK
+1) Quadratic Arithmetic Programs(QAP) là 1 công cụ toán học dùng trong zkSNARKs. Nó biểu diễn phần tính toán dưới dạng các phương trình bậc 2 trong finite field. Mỗi biến trong phương trình biểu diễn cho input, output, intermediate value of computation.
+
+Nó cho phép verify nhanh tính đúng đắn của việc tính toán mà k cần tính lại bằng cách check phương trình của QAP thỏa mãn. Nó vẽ bảng và sơ đồ của mạch với phép cộng và nhân ra như trong circom bth ấy
+
+2) Square Span Program (SSP)
+Là 1 công cụ tonas học giúp xây zkSNARKs. Nó cũng biểu diễn việc tính toán bằng 1 tập các phương trình bậc 2. 
+Trong SSP, 1 computation biểu diễn bằng 1 tập vector trong finite field. Mỗi bước tính toán là 1 vector. Các vector được sắp xếp sao cho mỗi bước verify chỉ cần check tính trực giao của các cặp vector xác định. 
+
+Nó biểu diễn mạch logic gồm các cổng AND OR thành các phương trình nhiều biến thôi.
+
+-> Encoding có 2 PP
+1) Dlog Encoding: dùng để biểu diễn encoded data tận dụng tính chất của Discrete Logarithm Problem (DLP). 
+
+Đó là bài toán encode biến x thành g^x với g là 1 generator bất kỳ trong group. 
+Như đã biết trong Tornadol cash, generator là giá trị mà khi mũ lên liên tục sẽ có thể tạo hết được mọi giá trị trong tập prime field. Ở bài toán này thì biết g và g^x rất khó để truy ngược được x trong trường prime field.
+
+Encryption: Enc(p(s)) = g^(p(s))
+
+2) Encryption Scheme: Là phương pháp mã hóa sao cho chỉ những partities xđ mói có thể đọc được. Có nhiều cách như dùng symmetric scheme or asymmetric schem => Chính là việc dùng key dó
+VD encyrption asymmetric với Dsk là secret key và Epk là public key:
+Enc(p(s)) = Epk(p(s))
+
+-> Còn có Power Diffie-Hellman assumption
+Là 1 assumption liên quan tới Diffie-Hellman problem. 
+Diffie-Hellman problem là vấn đề tính toán share secret trong thuật toán trao đổi khóa Diffie-Hellman. Nó mở rộng problem thành: cho g và g^x, g^y, g^z thì rất khó để tính giá trị của g^(x+y+z)
+
+
