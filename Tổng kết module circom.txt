@@ -11,7 +11,7 @@ Circom
 Hệ thống có 2 người Verifier và Prover. Verifier có nhiệm vụ kiểm tra xem Prover có biết về 1 thông tin nào đó không. Ta chỉ check là có biết hay không chứ ko liên quan đến chủ sở hữu. VD người dùng cung username password để vào hệ thống thì ta chỉ chứng minh là họ biết thông tin account đó và ta k qt tới việc họ có đúng là chủ sở hữu account đó không. 
 
 Quan niệm đa phần ta đều nghĩ Prover là người xấu luôn tìm cách đánh lừa Verifier để bypass hệ thống. Nhưng Verifier cũng có thể là người xấu ở đây. VD người dùng gửi password lên, không có gì đảm bảo là server sẽ thực sự hash password rồi mới lưu hoặc Verifier lưu thông tin người dùng lại rồi từ đó lần mò ra thông tin cá nhân khác. 
-Điều đó đặt ra 1 nhu cầu là cần có 1 giao thức kiểm tra mà phía Verifier không biết gì về kiến thức mà phía Prover đang nắm giữ => Zero knowledge proof.
+Điều đó đặt ra 1 nhu cầu là cần có 1 giao thức kiểm tra mà phía Verifier không biết gì về kiến thức mà phía Prover đang nắm giữ => Zero knowledge proof. Tôi chứng minh 1 người biết mật khẩu vào hệ thống và cho họ vào dù k họ không nói cho tôi biết mật khẩu đó là gì
 
 Vd: Hang của Alibaba là 1 hang hình tròn có 1 đầu vào, 1 đầu cánh cổng ở nửa bên kia hình tròn. P cần chứng minh là có chìa khóa mở cổng mà k tiết lộ cho V. P đi vào hang tùy ý chọn theo hướng A hoặc B. V đặt ra 1 nhận định là "Hãy đi ra ở cổng B", xảy ra 2 case:
 - Nếu ban đầu P vào cổng B thì chỉ cần quay đầu lại

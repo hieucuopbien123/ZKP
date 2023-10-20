@@ -3,7 +3,7 @@ ZKSnark
 
 
 # Basic
-Loại NIZK dùng phổ biến nhất là zk-SNARK proofs. Nó có 2 điểm lợi là tạo proof kích thước nhỏ và thời gian verify nhanh dù mạch có lớn đến mấy.
+Loại NIZK dùng phổ biến nhất là zk-SNARK proofs. Nó có 2 điểm lợi là tạo proof kích thước nhỏ và thời gian verify nhanh dù mạch có lớn đến mấy (build lâu)
 
 ZKSnark chứa 3 hàm: 
 Generator G(secret lamba, program C) = (proving key pk, verification key vk) => Nó là đặc trưng của mạch C và chỉ cần generate 1 lần
@@ -80,7 +80,7 @@ function transfer(address _to, bytes32 hashValue, bytes32 hashSenderBalanceAfter
 # Lịch sử
 -> Interactive Proof Protocol
 VD: Kil92 là 1 giao thức interactive để chia sẻ secret trong môi trường k đáng tin cậy ra đời từ rất lâu. Có thể dùng nó để chia sẻ khóa bí mật, khóa phiên. Cần cả 2 người tham gia quá trình sinh proof
-Vấn đề là họ muốn k cần cả 2 bên tham gia để sinh proofvì nếu 1 prover có 1000 verifier thì phải tương tác với cả ngàn người đó để sinh 1000 proof khác nhau.
+Vấn đề là họ muốn k cần cả 2 bên tham gia để sinh proof vì nếu 1 prover có 1000 verifier thì phải tương tác với cả ngàn người đó để sinh 1000 proof khác nhau.
 
 -> Random Oracle mô phỏng 1 hàm băm ngẫu nhiên hoàn hảo dùng trong các thuật toán mã hóa bảo mật cao.
 Vấn đề là họ muốn loại bỏ sự phụ thuộc của RO trong thiết kế mật mã như việc sử dụng các thuật toán khác or dùng kỹ thuật non-interactive
@@ -90,7 +90,7 @@ Vấn đề là họ muốn tối ưu hóa proof.
 
 -> Succinct Non-interactive ARgument of Knowledge (SNARK)
 Proof ngắn vì chỉ cần 1 interaction round với data public, là khi verifier gửi cho prover cái proving key để họ sinh bằng chứng. Proving key gọi là crs(common reference string)
-Nhược điểm là verifier phải pre-processing ở bước Generator (provingkey, verificationkey) - Trusted setup
+Nhược điểm là verifier phải pre-processing ở bước Generator (provingkey, verificationkey) - Trusted setup. Ở bước này họ sinh mạch và cặp key, trong khi phải tự k đươc biết lamba
 
 -> Zero-knowledge SNARK: thêm tính chất zero knowledge nữa
 
@@ -118,7 +118,7 @@ Với Enc(aP(s)) = pi*Enc(a*s^i)
 Nó cho phép verify nhanh tính đúng đắn của việc tính toán mà k cần tính lại bằng cách check phương trình của QAP thỏa mãn. Nó vẽ bảng và sơ đồ của mạch với phép cộng và nhân ra như trong circom bth ấy
 
 2) Square Span Program (SSP)
-Là 1 công cụ tonas học giúp xây zkSNARKs. Nó cũng biểu diễn việc tính toán bằng 1 tập các phương trình bậc 2. 
+Là 1 công cụ toán học giúp xây zkSNARKs. Nó cũng biểu diễn việc tính toán bằng 1 tập các phương trình bậc 2. 
 Trong SSP, 1 computation biểu diễn bằng 1 tập vector trong finite field. Mỗi bước tính toán là 1 vector. Các vector được sắp xếp sao cho mỗi bước verify chỉ cần check tính trực giao của các cặp vector xác định. 
 
 Nó biểu diễn mạch logic gồm các cổng AND OR thành các phương trình nhiều biến thôi.
@@ -131,7 +131,7 @@ Như đã biết trong Tornadol cash, generator là giá trị mà khi mũ lên 
 
 Encryption: Enc(p(s)) = g^(p(s))
 
-2) Encryption Scheme: Là phương pháp mã hóa sao cho chỉ những partities xđ mói có thể đọc được. Có nhiều cách như dùng symmetric scheme or asymmetric schem => Chính là việc dùng key dó
+2) Encryption Scheme: Là phương pháp mã hóa sao cho chỉ những partities xđ mói có thể đọc được. Có nhiều cách như dùng symmetric scheme or asymmetric scheme => Chính là việc dùng key dó
 VD encyrption asymmetric với Dsk là secret key và Epk là public key:
 Enc(p(s)) = Epk(p(s))
 

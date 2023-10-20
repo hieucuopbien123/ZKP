@@ -1,6 +1,7 @@
 Xây dựng 1 ứng dụng game solidity + circom + SnarkJS. Dùng socket chạy giao diện.
 Reverse Engineer project
 URL: https://www.youtube.com/watch?app=desktop&v=CgtNEALhJ3s&list=PLWACGbvIsEgn44LlTiPgVkOC4nG8tnJX-&index=1&t=39s&fbclid=IwAR0kPSPdOUPaQS73OuzWiXIrmUZGj7B_HceciXz-ChjP_-mhsSwN7KJMqmQ
+=> Có github repo trong đó
 
 
 

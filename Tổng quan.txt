@@ -1,0 +1,44 @@
+Tổng quan:
+- Có nhiều pp mở rộng blockchain như Rollups, Plasma, Payment Channel,...
+- Rollups có 2 loại là ZKRollup và Optimistic Rollup
+- Optimism và Arbitrum One là 2 blockchain layer2 của Ethereum tốc độ cao sử dụng công nghệ Optimistic Rollup.
+Còn dYdX, Loopring dùng ZKRollup để đạt tốc độ cao
+- Optimistic Rollup sử dụng fraud proof. Còn ZKRollup sử dụng Zero Knowledge Proof
+- ZK-Rollup chỉ là 1 cơ chế tạo bằng chứng cho nhiều giao dịch offchain rồi gửi lên onchain xác minh proof đó. Có nhiều loại Zero knowledge scheme giúp đạt được điều Đó
+- ZK-Snark là 1 Zero knowledge scheme giúp sinh proof có 2 tính chất Succinct(nhỏ) và Non-interactive(K tương tác)
+- ZK-STARK là 1 Zero knowledge scheme giúp sinh proof băng hàm băm có kích thước lớn và tốn enery nhưng secure hơn
+- StarkWare là 1 công ty cung các giải pháp blockchain bao gồm cả Zero knowledge scheme giúp sinh và xác thực bằng chứng (1 bước trong zkrollup). StarkWare có các sản phẩm: 
+Starknet là 1 network phi tập trung đầy đủ sử dụng ZkRollup STARK. Nó là 1 blockchain layer 2 riêng base lên Ethereum có nhiều sản phẩm DApp trên đó. Nó là 1 hệ sinh thái riêng
+Cairo: ngôn ngữ lập trình tính toán chung Starknet
+SHARP: Hệ thống thu thập các Cairo Programs để tạo ra 1 proof cho tất cả (Sau đó proof được đưa lên Ethereum và được xác minh bởi 1 STARK)
+- MatterLabs là 1 công ty cung cấp giải pháp mở rộng Ethereum bằng Zero knowledge proof. 1 trong những sản phẩm nổi tiếng là hệ sinh thái ZkSync.
+
+- ZKSync là 1 hệ sinh thái sử dụng công nghệ ZkRollup. Gồm 4 thành phần:
+- zksync v1 là 1 blockchain layer 2 base trên Ethereum bth với giải pháp tăng tốc là ZKRollup dùng Scheme là ZK-Snark để sinh bằng chứng. Nó là 1 ví dụ sử dụng ZKRollup đầy đủ
+- zkSync 2.0 là chain thay thế cho zksync v1, gồm 2 thành phần: zkEVM và zkporter
+- zkEVM là 1 EVM đặc biệt trên zkSync có vai trò giống EVM bth trên Ethereum nhưng ta có thể viết contract và deploy trên zksync 2.0 với khả năng mở rộng và bảo mật tốt hơn. 
+Cụ thể ta vẫn code contract solidity bình thường nhưng khi thực hiện tx, zkEVM sẽ gom nhiều tx lại rồi sinh 1 bằng chứng duy nhất gửi lên ethereum layer1 nên giá rẻ và tốc độ cao. zkEVM cũng chỉ cung bằng chứng lên layer1 và layer1 sẽ verify rồi update state luôn nên thậm chí k để lộ thông tin giao dịch, tăng bảo mật.
+- zkPorter: trạng thái layer 2 được chia làm 2 bên là zkRollup với onchain data availability và zkPorter với offchain data availability. Contract và tài khoản bên zkporter có thể tương tác với tk bên zkrollup với giá rẻ và ngược lại. VD: Người dùng có thể tạo 1 tk bên zkporter rồi tạo 1000 tx trên đó, cuối cùng submit 1 phát lên bên rollup thì cũng rẻ hơn vì gom 1000 tx lại còn vài tx đổi state thôi.
+
+Thực tế contract viết bằng solidity được compiled thành dạng dạng bằng chứng tương thích với EVM để xác minh và dùng được data từ zkPorter nên người dùng có tk trên zkporter có thể thực hiện nh tx offchain như v.
+
+- Circom là 1 ngôn ngữ code mạch. Để từ đó dùng ZK-Snark sinh bằng chứng từ mạch
+- iden3 là 1 thư viện cung các công cụ giúp xây dựng ứng dụng Decentralized bao gồm cả ZKP
+
+- Groth là 1 thuật toán sinh bằng chứng NIZK
+- Groth16 là 1 thuật toán cải tiến nhanh và gọn hơn Groth. Nó dùng thuật toán elliptic curve cryptography, phù hợp khi cần sinh nhiều proof cho cùng 1 mạch.
+- Plonk là thuật toán cải tiến hơn nữa, giảm kích thước và thời gian xác thực. Nó dùng polynomial commitment schemes chuyển đổi đa thức thành tập evaluation point, phù hợp khi cần xử lý nhiều mạch khác nhau
+=> PP để tạo bằng chứng NIZK chính là cốt lõi của Zero knowledge scheme ZKSnark. 3 phương pháp thường dùng nhất và chúng tạo ra các phiên bản zksnark khác nhau dùng tùy TH.
+- Ngoài ra còn có FFLONK(beta version). Trong khi Groth 16 cần trusted ceremony cho từng mạch thì PLONK và FFLONK(beta version) chỉ cần 1 ptau ceremony chung là được.
+
+=> Save point: Tức là zksync v1 và zksync 2.0 là 1 blockchain mở rộng bằng ZKRollup. ZKRollup là 1 cơ chế ở layer2 sinh bằng chứng cuộn nhiều giao dịch và gửi lên layer 1, nó dùng ZKSnark để làm bước sinh bằng chứng. ZKSnark là 1 Zero knowledge scheme có nhiều loại để sinh bằng chứng như Groth, Groth16, Plonk, FFLonk
+
+- SnarkJS là 1 thư viện JS giúp implement ZKSnark cho dev bằng code JS
+- verificationkey, provingkey, proof, secret lamba
+- Kil92 là 1 giao thức để chia sẻ secret trong môi trường k đáng tin cậy ra đời từ rất lâu nhưng cần cả 2 người tham gia quá trình sinh proof nên k dùng
+- SAT circuit là Boolean satisfiablitiy circuit xác định input có thỏa mãn 1 công thức boolean không. 
+- Quadratic Arithmetic Programs(QAP) và Square Span Program (SSP) là 2 công cụ toán học dùng trong zkSnarks để biểu diễn việc tính toán và verify tính đúng đắn của việc tính toán
+- Dlog Encoding là kiểu encode cho x, mã hóa x bằng g^x với g là 1 generator trong prime field
+- Encryption Scheme là kiểu encode mà chỉ 1 số parties mới đọc được như mã hóa bằng symmetric or asymmetric key
+
+
