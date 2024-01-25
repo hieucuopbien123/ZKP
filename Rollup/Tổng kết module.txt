@@ -1,0 +1,9 @@
+Rollup
+=> ref tới "ZKP / search ZKSnark"
+=> ref tới "ZKP / search Groth16"
+
+
+# Basic
+Việc dùng và deploy trên Optimism hoặc Arbitrum đã là dùng rollup tốc độ cao fee rẻ rồi
+
+

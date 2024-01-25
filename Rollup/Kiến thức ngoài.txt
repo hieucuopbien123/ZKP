@@ -1,0 +1,19 @@
+-> Rollup là 1 trong các giải pháp mở rộng blockchain bằng cách dùng layer2 làm giảm áp lực xử lý lên chuỗi gốc
+
+Cơ chế: gom nhiều giao dịch trên sidechain thành 1 tx duy nhất và tạo bằng chứng mật mã SNARK. Mọi xử lý và xác minh chữ ký hay gì đều trên sidechain, đến cuối chỉ cần cùng SNARK tới chuỗi chính lưu data giao dịch là xong. 
+Ta quyết định mainchain lưu cái gì và sidechain lưu cái gì. VD mainchain lưu tiền, sidechain lưu data logic thực. 
+
+-> Rollup có 2 loại là zkRollup và Optimistic Rollup. Optimistic Rollup dùng fraud proof, zkRollup dùng valid proof.
+
+Protocol zkRollup bao gồm cả việc dùng zkSnark để sinh bằng chứng cho mạch.
+zkSync là 1 hệ sinh thái có nhiều sản phẩm, trong đó có sản phẩm zkSync 2.0 bao gồm nhiều sản phẩm con như zkEVM là VM tương thích với SM dùng zero knowledge proof, layer2 của ethereum (2 nửa zkrollup lưu state onchain, zkPorter lưu state offchain). 
+=> Tức là zkSync có các công cụ hỗ trợ protocol zkRollup đó. Nếu ta tự làm zkRollup thì rất khó mà nên ứng dụng công cụ có sẵn của zkSync để làm. Ta cần thao tác trên layer 2 của nó và rollup giao dịch từ đó tới chuỗi chính, ta cũng có thể dùng các sidechain khác nhưng zkSync hỗ trợ tốt hơn.
+
+Lưu ý: VD Optimistic Rollup thì mainchain update state nếu ZKSnark hợp lệ, sidechain update state nếu k có fraudproof trong challenge period. Thực tế cả 2 chỉ update state sau khoảng challenge period. Mainchain cũng k update state nếu fraudproof được gửi đến trong challenge period, ZKSnark hợp lệ với nó chỉ là điều kiện check đầu tiên thôi.
+
+
+=> ref tới "Blockchain / Blockchain Basic / Module layer 2.txt"
+
+=> ref tới "ZKP / Tổng kết module.txt"
+
+
